@@ -1,3 +1,4 @@
+require 'rspec'
 
 module Gless
 
@@ -8,26 +9,31 @@ module Gless
     attr_reader :current_page
     attr_reader :acceptable_pages
 
-    def initialize( browser, application, page_base_class, start_page )
+    # FIXME: Document this crazy shit, and how it gets called
+    def self.add_page_class( klass )
+      @@page_classes ||= []
+      @@page_classes << klass
+    end
+
+
+    # FIXME: page_base_class can probably be dropped in favore of
+    # Gless::Page or something when that's moved.
+    def initialize( browser, application, page_base_class )
       Logging.log.debug "Session: Initializing with #{browser.inspect}"
       @browser = browser
       @application = application
       @pages = Hash.new
       @timeout = 30
       @page_base_class = page_base_class
-      @start_page = start_page
+      @acceptable_pages = nil
 
-      @page_base_class.subclasses.each do |sc|
-        page = sc.new( @browser, self, @application )
-        @pages[sc] = page
+      @@page_classes.each do |sc|
+        @pages[sc] = sc.new( @browser, self, @application )
       end
 
-      # Special case: add the login page, which isn't really part of
-      # the application
-      page = @start_page.new( @browser, self, @application )
-      @pages[@start_page] = page
+      Logging.log.debug "Session: Final pages table: #{@pages.keys.map { |x| x.name }}"
 
-      # Logging.log.debug "Session: Final pages table: #{@pages.inspect}"
+      return self
     end
 
     def session_logging(m, args)
@@ -41,8 +47,9 @@ module Gless
     def enter(pklas)
       Logging.log.info "Session: Entering the site directly using the entry point for the #{pklas.name} page class"
       @current_page = pklas
-      @acceptable_pages = pklas
       @pages[pklas].enter
+      # Needs to run through our custom acceptable_pages= method
+      self.acceptable_pages = pklas
     end
 
     # FIXME: Check the text of the alert to see that it's the one
@@ -63,7 +70,7 @@ module Gless
       if newpage.kind_of? Class
         return [ newpage ]
       elsif newpage.kind_of? Symbol
-        return [ @page_base_class.const_get(newpage) ]
+        return [ @pages.keys.find { |x| x.name =~ /#{newpage.to_s}$/ } ]
       elsif newpage.kind_of? Array
         return newpage.map { |p| check_acceptable_pages p }
       else
@@ -102,6 +109,13 @@ module Gless
         good_page=false
         new_page=nil
         @timeout.times do
+          if @acceptable_pages.nil?
+            # If we haven't gone anywhere yet, anything is good
+            good_page = true
+            new_page
+            break
+          end
+
           @acceptable_pages.each do |page|
             Logging.log.debug "Session: Checking our current url, #{@browser.url}, for a match in #{page.name}: #{@pages[page].match_url(@browser.url)}"
             if @pages[page].match_url(@browser.url)
