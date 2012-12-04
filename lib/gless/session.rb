@@ -18,7 +18,7 @@ module Gless
 
     # FIXME: page_base_class can probably be dropped in favore of
     # Gless::Page or something when that's moved.
-    def initialize( browser, application, page_base_class )
+    def initialize( browser, config, application, page_base_class )
       Logging.log.debug "Session: Initializing with #{browser.inspect}"
       @browser = browser
       @application = application
@@ -26,6 +26,7 @@ module Gless
       @timeout = 30
       @page_base_class = page_base_class
       @acceptable_pages = nil
+      @config = config
 
       @@page_classes.each do |sc|
         @pages[sc] = sc.new( @browser, self, @application )
@@ -34,6 +35,10 @@ module Gless
       Logging.log.debug "Session: Final pages table: #{@pages.keys.map { |x| x.name }}"
 
       return self
+    end
+
+    def get_config(*args)
+      @config.get(*args)
     end
 
     def session_logging(m, args)
