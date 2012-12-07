@@ -1,0 +1,65 @@
+Some old notes about the session object; may or may not still be
+relevant, likely mostly already be implemented at this point.
+
+# session.rb
+#
+# Provides a proxy to the varous page model objects that are encountered in a
+# session.  Methods that are not specific to the session object are passed
+# through to the current page model object.
+#
+# When the session is instantiated, the type of the session is given.  This
+# type determines what page model collections get loaded (ie for Cloud,
+# Orchestra, a test app, or github, for example)  During this initiation, the
+# various page model classes of that collection are loaded and queried for what
+# urls correspond to the page model.
+#
+# When a session object creates a page model object, it passes itself to that
+# object during creation, and stores that object as the current proxy target.
+#
+# If a page model object performs an action that will result in a new target
+# page, and its parent session object is not nil, the page model object will
+# suggest to the parent session object what the following page will be -- it is
+# up to the session object to validate that the target has correctly changed
+# (discuss alternative thoughts?)
+#
+# Requirements:
+# - page model classes have 'path' directive which takes one or more regular
+# expressions (usually one) to specify a matching url pattern.
+# - page model classes have a getter method for the path, that can be called
+# by the session object
+# - page model objects have a instance variable for the current session, which
+# is passed in along with the url when being instantiated
+# - page model objects should cause an exception if they are instantiated with
+# an incompatible url (maybe? - discuss)
+# - page model objects can be instantiated with no session or url (ie they are
+# optional)
+# - page model objects will tell their parent session object when an action
+# they take takes the browser to another page, ideally with the new target page
+# - session objects, when instantiated, will load all of the page model classes
+# for the passed in type -- for each model loaded this way, the session model
+# will interrogate it for the matching path pattern and store this for lookup
+# later.
+# - session class will have a minimal public methods collection, primarily
+# acting as a proxy for the contained page object.
+# - session objects will retain a history of proxy method calls and page
+# transitions for logging/debugging purposes.
+# - sessions can be told to go to a url, which will change the current page
+#model object
+#
+# Path syntax:
+#
+# In the page model classes, the directive for the path is originally
+# recommended to be:
+#   path r'/accounts/([0-9]+)/apps'
+#
+# However, a more natural language would be preferred, such as:
+#   path '/accounts/:account_id/apps'
+#
+# This has the ability to use the provided real path as an argument, and pull
+# out and name the variable aspect of that path.  This is used in sinatra and
+# rails router code, so it has an established precident.  The trick is to be
+# able to parse that code to change it to the regular expression and variable
+# list.
+#
+# The method provided to query the path pattern would result in the pattern
+# itself, not the natural language representation.
