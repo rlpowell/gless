@@ -20,22 +20,20 @@ module Gless
     # one thing that can happen when you click a button or whatever.
     attr_reader :acceptable_pages
 
-    # FIXME: Document this crazy shit, and how it gets called
+    # This exists only to be called by `inherited` on
+    # Gless::BasePage; see documentation there.
     def self.add_page_class( klass )
       @@page_classes ||= []
       @@page_classes << klass
     end
 
 
-    # FIXME: page_base_class can probably be dropped in favore of
-    # Gless::Page or something when that's moved.
-    def initialize( browser, config, application, page_base_class )
+    def initialize( browser, config, application )
       Logging.log.debug "Session: Initializing with #{browser.inspect}"
       @browser = browser
       @application = application
       @pages = Hash.new
       @timeout = 30
-      @page_base_class = page_base_class
       @acceptable_pages = nil
       @config = config
 

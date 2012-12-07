@@ -1,50 +1,80 @@
-require 'logging'
+require 'rspec'
 
 module Gless
+  #
+  # This class is intended to be the base class for all page classes
+  # used by the session object to represent individual pages on a
+  # website.  In fact, if you *don't* subclass all your page classes
+  # from this one, something is likely to break.
+  #
+  # = Class Level Methods
+  #
+  # This class defines a bunch of class-level behaviour, so that we can
+  # have things like
+  #
+  #   element :email_field,       :text_field,    :id => 'email'
+  #
+  # in the class definition itself.
+  #
+  # However, this is too early to do much of the initialization,
+  # which leads to some complexity in the real init method to
+  # basically make up for deferred computation.
+  #
+  # = Calling Back To The Session
+  #
+  # The session object needs to know all of the page object classes.
+  # This is accomplished by having an +inherited+ method on this
+  # (the +BasePage+) class that calls +add_page_class+ on the Session
+  # class; this only stores the subclass, it does no further
+  # processing, since complicated processing at class creation time
+  # tends to hit snags.  When a session object is actually
+  # instantiated, the list of page classes is walked, and a page
+  # class instance is created for each for future use.
+  #
   class Gless::BasePage
     include RSpec::Matchers
 
     #******************************
     # Class Level
     #******************************
-    #
-    # We now define a bunch of class-level behaviour, so that we can
-    # have things like
-    #
-    # element :email_field,       :text_field,    { :id => 'email' }, true
-    #
-    # in the class definition itself.
-    #
-    # However, this is too early to do much of the initialization,
-    # which leads to some complexity in the real init method to
-    # basically make up for deferred computation.
-    #
+
     class << self
-      # A URL that can be used to come to this page directly, if that
-      # can be known at compile time; has no sensible default
+      # @return [String] A URL that can be used to come to this page
+      #   directly, if that can be known at compile time; has no
+      #   sensible default
       attr_accessor :entry_url
 
-      # A list of strings or patterns to add to the Session dispatch
-      # list
+      # @return [Array<String>, Array<Regexp>] A list of strings or
+      #   patterns to add to the Session dispatch list
       attr_writer :url_patterns
+
+      # @return [Array] Just sets up a default (to wit, []) for url_patterns
       def url_patterns
         @url_patterns ||= []
       end
 
-      # FIXME: document the hell out of this
+      # Calls back to Gless::Session.  See overview documentation
+      # fro +Gless::BasePage+
       def inherited(klass)
         Gless::Session.add_page_class klass
       end
 
-      # An element (well, name of an element) that should *always* exist
-      # if this page is loaded; used to wait for the page to load and
-      # validate correctness.  The page is not considered fully loaded
-      # until all of these elements are found.
+      # @return [Array<String>] An list of elements (actually just
+      #   their method names) that should *always* exist if this
+      #   page is loaded; used to wait for the page to load and
+      #   validate correctness.  The page is not considered fully
+      #   loaded until all of these elements are found.
       attr_writer :validator_elements
+
+      # @return [Array] Just sets up a default (to wit, []) for
+      #   validator_elements
       def validator_elements
         @validator_elements ||= []
       end
 
+      # Specifies the title that this page is expected to have.
+      #
+      # @param [String,Regexp] expected_title
       def expected_title expected_title
         define_method 'has_expected_title?' do
           Logging.log.debug "In GenericBasePage, for #{self.class.name}, has_expected_title?: current is #{@browser.title}, expected is #{expected_title}"
@@ -52,12 +82,47 @@ module Gless
         end
       end
 
-      # The arguments here are our internal name for the field, the
-      # Watir type/class of the element, a Watir selector hash, and
-      # whether or not the element should be used to routinely validate
-      # the page's correctness (i.e., if the element is central to the
-      # page and always reliably is present).  The page isn't considered
-      # loaded until all validator elements are present.
+      # Specifies an element that might appear on the page.
+      # The goal is to be easy for users of this library to use, so
+      # there's some real complexity here so that the end user can
+      # just do stuff like:
+      #
+      #   element :deleted_application    , :div     , :text => /Your application. \S+ has been deleted./
+      # 
+      # and it comes out feeling very natural.
+      #
+      # A longer example:
+      #
+      #   element :new_application_button , :element , :id => 'new_application'  , :validator => true , :click_destination => :ApplicationNewPage
+      #
+      # That's about as complicated as it gets.
+      #
+      # The first two arguments (name and type) are required.  The
+      # rest is a hash.  +:validator_elements+ and +:click_destination+
+      # (see below) have special meaning.
+      #
+      # Anything else is taken to be a Watir selector.  If no
+      # selector is forthcoming, the name is taken to be the element
+      # id.
+      #
+      # @param [Symbol] basename The name used in the Gless user's code
+      #   to refer to this element.  This page object ends up with a
+      #   method of this name.
+      #
+      # @param [Symbol] type The Watir element type; used to
+      #   dynamically pick which Watir element class to use for this
+      #   element.
+      #
+      # @param [Boolean] validator Whether or not the element should
+      #   be used to routinely validate the page's correctness
+      #   (i.e., if the element is central to the page and always
+      #   reliably is present).  The page isn't considered loaded
+      #   until all validator elements are present.  Defaults to
+      #   false.
+      #
+      # @param [Symbol] click_destination A symbol giving the last
+      #   bit of the class name of the page that clicking on this
+      #   element leads to, if any.
       def element basename, type, opts = {}
         Logging.log.debug "In GenericBasePage for #{self.name}: element: initial opts: #{opts}"
 
@@ -97,6 +162,12 @@ module Gless
         end
       end
 
+      # @return [Rexexp,String] Used to give the URL string or pattern that matches this page; example:
+      #
+      #   url %r{^:base_url/accounts/[0-9]+/apps$}
+      #
+      # +:base_url+ is replaced with the output of
+      # +@application.base_url+
       def url( url )
         if url.is_a?(String)
           url_patterns << Regexp.new(Regexp.escape(url))
@@ -107,7 +178,9 @@ module Gless
         end
       end
 
-      # Variable substitution in the entry_url
+      # Set this page's entry url.
+      #
+      # @param [String] url
       def set_entry_url( url )
         @entry_url = url
       end
@@ -117,11 +190,20 @@ module Gless
     #******************************
     # Instance Level
     #******************************
+
+
+    # @return [Watir::Browser]
     attr_accessor :browser
+
+    # The main application object.  See the README for specifics.
     attr_accessor :application
+
+    # @return [Gless::Session] The session object that uses/created
+    #   this page.
     attr_accessor :session
 
-    # Perform special variable substitution
+    # Perform special variable substitution; used for url match
+    # patterns and entry urls.
     def substitute str
       if str.kind_of?(Regexp)
         reg = str.source

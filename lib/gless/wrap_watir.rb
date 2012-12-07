@@ -1,4 +1,3 @@
-require 'logging'
 
 module Gless
 

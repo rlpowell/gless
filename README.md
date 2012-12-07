@@ -46,3 +46,5 @@ markup, but using the YARD system.  Various things you can do:
 ## Other ##
 
 FIXME: Add a description ofthe abstraction layers wiht examples.
+
+FIXME: Specify in detail the things the application object must have
