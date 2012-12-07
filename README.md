@@ -15,24 +15,34 @@ Ruby 1.9.3 is used for development of this project.
 
 Gless expects that you're running tests under RSpec or Cucumber;
 significant modification would likely be required to make it run
-otherwise, as it uses RSpec's "should" extensively.
+otherwise, as it uses RSpec's `should` extensively.
 
-The following should be sufficient to allow "rake build" to work:
+The following should be sufficient to allow all the rake tasks to
+run:
 
-    gem install yard-tomdoc watir-webdriver rspec
+    gem install yard-tomdoc redcarpet watir-webdriver rspec
 
-### External Deps ###
-
-* RSpec
-* yard and yard-tomdoc for documentation
-* mini\_magick and the imagemagick package for your OS if you want thumbnails in the logging
-
-### Standard Libary Deps ###
-
-* FIXME: ??
+In addition, you'll need the mini\_magick gem and the imagemagick OS
+package if you want thumbnails in the logging output.
 
 ## Tests ##
 
-Doesn't have any; if you can tell me how I should test something
+Gless doesn't have any; if you can tell me how I should test something
 like this besides "just run the sample app", please feel free to
 suggest.
+
+## Docs ##
+
+Other than this readme, the internal API documentation is TomDoc
+markup, but using the YARD system.  Various things you can do:
+
+* `rake doc`
+ + generate the documentation
+* `yard list` and `yard ri`
+ + command line access to the documentation
+* `yard server`
+ + pretty web interface to the documentation
+
+## Other ##
+
+FIXME: Add a description ofthe abstraction layers wiht examples.

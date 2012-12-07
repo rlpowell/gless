@@ -2,11 +2,22 @@ require 'rspec'
 
 module Gless
 
-  # FIXME: Document
+  # Provides an abstraction layer between the individual pages of an
+  # website and the high-level application layer, so that the
+  # application layer doesn't have to know about what page it's on
+  # or similar.
+  #
+  # For details, see the README.
   class Gless::Session
     include RSpec::Matchers
 
+    # The page class for the page the session thinks we're currently
+    # on.
     attr_reader :current_page
+
+    # A list of page classes of pages that it's OK for us to be on.
+    # Usually just one, but some site workflows might have more than
+    # one thing that can happen when you click a button or whatever.
     attr_reader :acceptable_pages
 
     # FIXME: Document this crazy shit, and how it gets called

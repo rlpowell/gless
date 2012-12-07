@@ -29,6 +29,10 @@ desc "Generate yard documentation for the api"
 YARD::Rake::YardocTask.new do
 end
 
+desc "Generate yard documentation for the api"
+YARD::Rake::YardocTask.new :doc do
+end
+
 desc "Clean existing gems and re-install"
 task :devinst do
   ['clean','build','install'].each { |task| Rake::Task[task].invoke }

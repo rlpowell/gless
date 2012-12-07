@@ -13,6 +13,7 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'rspec'
   s.add_dependency 'watir-webdriver'
+  s.add_dependency 'selenium-webdriver'
   s.add_development_dependency 'debugger'
   s.add_development_dependency 'yard'
   s.add_development_dependency 'yard-tomdoc'
