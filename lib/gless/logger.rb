@@ -58,7 +58,8 @@ module Gless
       @replay_log.formatter = proc { |severity, datetime, progname, msg|
         # Can't flush after from here, so flush prior stuff
         replay_log_file.flush
-        stuff=original_formatter.call(severity, datetime, progname + " #{tag} ", msg)
+        npn = "#{progname} #{tag} ".sub(/^\s*/,'').sub(/\s*$/,'')
+        stuff=original_formatter.call(severity, datetime, "#{progname} #{tag} ", msg)
         #"<p>#{ERB::Util.html_escape(stuff.chomp)}</p>\n"
         "<p>#{stuff.chomp}</p>\n"
       }
@@ -67,7 +68,7 @@ module Gless
       @normal_log = ::Logger.new(STDOUT)
       # Add in the tag
       @normal_log.formatter = proc { |severity, datetime, progname, msg|
-        original_formatter.call(severity, datetime, progname + " #{tag} ", msg)
+        original_formatter.call(severity, datetime, "#{progname} #{tag} ", msg)
       }
 
       @normal_log.level = ::Logger::WARN

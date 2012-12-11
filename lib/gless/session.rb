@@ -133,7 +133,7 @@ module Gless
           if @acceptable_pages.nil?
             # If we haven't gone anywhere yet, anything is good
             good_page = true
-            new_page
+            new_page = @pages[@current_page]
             break
           end
 

@@ -22,14 +22,14 @@ module Gless
       type=@config.get :global, :browser, :type
       browser=@config.get :global, :browser, :browser
       port=@config.get :global, :browser, :port
-      @logger.log.debug "Launching some browser; #{type}, #{port}, #{browser}"
+      @logger.debug "Launching some browser; #{type}, #{port}, #{browser}"
 
       if type == 'remote'
-        @logger.log.info "Launching remote browser #{browser} on port #{port}"
+        @logger.info "Launching remote browser #{browser} on port #{port}"
         capabilities = Selenium::WebDriver::Remote::Capabilities.new( :browser_name => browser, :javascript_enabled=>true, :css_selectors_enabled=>true, :takes_screenshot=>true, :native_events=>true )
         @browser = Watir::Browser.new(:remote, :url => "http://127.0.0.1:#{port}/wd/hub", :desired_capabilities => capabilities)
       else
-        @logger.log.info "Launching local browser #{browser}"
+        @logger.info "Launching local browser #{browser}"
         @browser = Watir::Browser.new :browser
       end
     end

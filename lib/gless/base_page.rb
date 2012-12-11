@@ -77,7 +77,7 @@ module Gless
       # @param [String,Regexp] expected_title
       def expected_title expected_title
         define_method 'has_expected_title?' do
-          $master_logger.log.debug "In GenericBasePage, for #{self.class.name}, has_expected_title?: current is #{@browser.title}, expected is #{expected_title}"
+          @session.log.debug "In GenericBasePage, for #{self.class.name}, has_expected_title?: current is #{@browser.title}, expected is #{expected_title}"
           expected_title.kind_of?(Regexp) ? @browser.title.should =~ expected_title :  @browser.title.should == expected_title
         end
       end
@@ -129,7 +129,8 @@ module Gless
       # @option opts [Object] ANY All other opts keys are used as
       #   Watir selectors to find the element on the page.
       def element basename, type, opts = {}
-        $master_logger.log.debug "In GenericBasePage for #{self.name}: element: initial opts: #{opts}"
+        # No class-compile-time logging; it's way too much work, as this runs at *rake* time
+        # $master_logger.debug "In GenericBasePage for #{self.name}: element: initial opts: #{opts}"
 
         # Promote various other things into selectors; do this before
         # we add in the default below
@@ -145,7 +146,8 @@ module Gless
 
         opts = { :selector => { :id => basename.to_s }, :validator => false, :click_destination => nil }.merge(opts)
 
-        $master_logger.log.debug "In GenericBasePage for #{self.name}: element: final opts: #{opts}"
+        # No class-compile-time logging; it's way too much work, as this runs at *rake* time
+        # $master_logger.debug "In GenericBasePage for #{self.name}: element: final opts: #{opts}"
 
         selector = opts[:selector]
         click_destination = opts[:click_destination]
@@ -154,12 +156,14 @@ module Gless
         methname = basename.to_s.tr('-', '_')
 
         if validator
-          $master_logger.log.debug "In GenericBasePage, for #{self.name}, element: #{basename} is a validator"
+          # No class-compile-time logging; it's way too much work, as this runs at *rake* time
+          # $master_logger.debug "In GenericBasePage, for #{self.name}, element: #{basename} is a validator"
           validator_elements << methname
         end
 
         if click_destination
-          $master_logger.log.debug "In GenericBasePage, for #{self.name}, element: #{basename} has a special destination when clicked, #{click_destination}"
+          # No class-compile-time logging; it's way too much work, as this runs at *rake* time
+          # $master_logger.debug "In GenericBasePage, for #{self.name}, element: #{basename} has a special destination when clicked, #{click_destination}"
         end
 
         define_method methname do
