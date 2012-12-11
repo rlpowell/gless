@@ -77,7 +77,7 @@ module Gless
       # @param [String,Regexp] expected_title
       def expected_title expected_title
         define_method 'has_expected_title?' do
-          Logging.log.debug "In GenericBasePage, for #{self.class.name}, has_expected_title?: current is #{@browser.title}, expected is #{expected_title}"
+          $master_logger.log.debug "In GenericBasePage, for #{self.class.name}, has_expected_title?: current is #{@browser.title}, expected is #{expected_title}"
           expected_title.kind_of?(Regexp) ? @browser.title.should =~ expected_title :  @browser.title.should == expected_title
         end
       end
@@ -113,18 +113,23 @@ module Gless
       #   dynamically pick which Watir element class to use for this
       #   element.
       #
-      # @param [Boolean] validator Whether or not the element should
+      # @param [Hash] opts Further options for the element.
+      #
+      # @option opts [Boolean] :validator (false) Whether or not the element should
       #   be used to routinely validate the page's correctness
       #   (i.e., if the element is central to the page and always
       #   reliably is present).  The page isn't considered loaded
       #   until all validator elements are present.  Defaults to
       #   false.
       #
-      # @param [Symbol] click_destination A symbol giving the last
+      # @option opts [Symbol] :click_destination (nil) A symbol giving the last
       #   bit of the class name of the page that clicking on this
       #   element leads to, if any.
+      # 
+      # @option opts [Object] ANY All other opts keys are used as
+      #   Watir selectors to find the element on the page.
       def element basename, type, opts = {}
-        Logging.log.debug "In GenericBasePage for #{self.name}: element: initial opts: #{opts}"
+        $master_logger.log.debug "In GenericBasePage for #{self.name}: element: initial opts: #{opts}"
 
         # Promote various other things into selectors; do this before
         # we add in the default below
@@ -140,7 +145,7 @@ module Gless
 
         opts = { :selector => { :id => basename.to_s }, :validator => false, :click_destination => nil }.merge(opts)
 
-        Logging.log.debug "In GenericBasePage for #{self.name}: element: final opts: #{opts}"
+        $master_logger.log.debug "In GenericBasePage for #{self.name}: element: final opts: #{opts}"
 
         selector = opts[:selector]
         click_destination = opts[:click_destination]
@@ -149,16 +154,16 @@ module Gless
         methname = basename.to_s.tr('-', '_')
 
         if validator
-          Logging.log.debug "In GenericBasePage, for #{self.name}, element: #{basename} is a validator"
+          $master_logger.log.debug "In GenericBasePage, for #{self.name}, element: #{basename} is a validator"
           validator_elements << methname
         end
 
         if click_destination
-          Logging.log.debug "In GenericBasePage, for #{self.name}, element: #{basename} has a special destination when clicked, #{click_destination}"
+          $master_logger.log.debug "In GenericBasePage, for #{self.name}, element: #{basename} has a special destination when clicked, #{click_destination}"
         end
 
         define_method methname do
-          WrapWatir.new(@browser, @session, type, selector, click_destination)
+          Gless::WrapWatir.new(@browser, @session, type, selector, click_destination)
         end
       end
 
@@ -215,7 +220,7 @@ module Gless
     end
 
     def initialize browser, session, application
-      # Logging.log.debug "In GenericBasePage, for #{self.class.name}, init: #{browser}, #{session}, #{application}"
+      # @session.log.debug "In GenericBasePage, for #{self.class.name}, init: #{browser}, #{session}, #{application}"
       @browser = browser
       @session = session
       @application = application
@@ -231,7 +236,7 @@ module Gless
 
       self.class.url_patterns.map! { |x| substitute x }
 
-      Logging.log.debug "In GenericBasePage, for #{self.class.name}, init: class vars: #{self.class.entry_url}, #{self.class.url_patterns}, #{self.class.validator_elements}"
+      @session.log.debug "In GenericBasePage, for #{self.class.name}, init: class vars: #{self.class.entry_url}, #{self.class.url_patterns}, #{self.class.validator_elements}"
     end
 
     # Return true if the given url matches this page's patterns
@@ -253,10 +258,10 @@ module Gless
 
     # Go to the page from who-cares-where, and make sure we're there
     def enter
-      Logging.log.debug "#{self.class.name}: enter"
+      @session.log.debug "#{self.class.name}: enter"
 
       arrived? do
-        Logging.log.info "#{self.class.name}: about to goto #{self.class.entry_url} from #{@browser.url}"
+        @session.log.info "#{self.class.name}: about to goto #{self.class.entry_url} from #{@browser.url}"
         @browser.goto self.class.entry_url
       end
     end
@@ -276,22 +281,22 @@ module Gless
         self.class.validator_elements.each do |x|
           begin
             if self.send(x).wait_until_present(5) 
-              Logging.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} found."
+              @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} found."
             else
               # Probably never reached
-              Logging.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
+              @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
             end
           rescue Watir::Wait::TimeoutError => e
-            Logging.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
+            @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
             all_validate = false
           end
         end
 
         if all_validate && match_url( @browser.url )
-          Logging.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found."
+          @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found."
           break
         else
-          Logging.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: not all validator elements found, trying again."
+          @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: not all validator elements found, trying again."
         end
       end
 
@@ -308,11 +313,11 @@ module Gless
           self.send(x).wait_until_present(5).should be_true
         end
 
-        Logging.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: completed successfully."
+        @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: completed successfully."
         return true
       rescue Exception => e
         if @session.get_config :global, :debug
-          Logging.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: something doesn't match (url or title or expected elements), giving you a debugger"
+          @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: something doesn't match (url or title or expected elements), giving you a debugger"
           debugger
         else
           return false

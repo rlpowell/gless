@@ -16,16 +16,16 @@ module Gless
     end
     def wrapper_logging(m, args)
       if @orig_selector_args.inspect =~ /password/i
-        Logging.log.debug "WrapWatir: Doing something with passwords, redacted."
+        @session.log.debug "WrapWatir: Doing something with passwords, redacted."
       else
         if @session.get_config :global, :debug
-          Logging.add_to_replay_log( @browser, @session )
+          @session.add_to_replay_log( @browser, @session )
         end
 
-        Logging.log.debug "WrapWatir: Calling #{m} with arguments #{args.inspect} on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
+        @session.log.debug "WrapWatir: Calling #{m} with arguments #{args.inspect} on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
 
         if @elem.present? && @elem.class.name == 'Watir::HTMLElement'
-          Logging.log.warn "FIXME: You have been lazy and said that something is of type 'element'; its actual type is  #{@elem.to_subtype.class.name}"
+          @session.log.warn "FIXME: You have been lazy and said that something is of type 'element'; its actual type is  #{@elem.to_subtype.class.name}"
         end
       end
     end
@@ -37,11 +37,11 @@ module Gless
 
     def click
       if @click_destination
-        Logging.log.debug "WrapWatir: A #{@elem.class.name} element identified by: #{@orig_selector_args.inspect} has a special destination when clicked, #{@click_destination}"
+        @session.log.debug "WrapWatir: A #{@elem.class.name} element identified by: #{@orig_selector_args.inspect} has a special destination when clicked, #{@click_destination}"
         @session.acceptable_pages = @click_destination
       end
       wrapper_logging('click', nil)
-      Logging.log.debug "WrapWatir: Calling click on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
+      @session.log.debug "WrapWatir: Calling click on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
       @elem.click
     end
 
@@ -66,20 +66,20 @@ module Gless
         @elem.set(set_text)
 
         @num_retries.times do |x|
-          Logging.log.debug "WrapWatir: Checking that text entry worked"
+          @session.log.debug "WrapWatir: Checking that text entry worked"
           @elem = @browser.send(@orig_type, @orig_selector_args)
           if @elem.value == set_text
             break
           else
-            Logging.log.debug "WrapWatir: It did not; sleeping for #{@wait_time} seconds"
+            @session.log.debug "WrapWatir: It did not; sleeping for #{@wait_time} seconds"
             sleep @wait_time
-            Logging.log.debug "WrapWatir: Retrying."
+            @session.log.debug "WrapWatir: Retrying."
             wrapper_logging('set', set_text)
             @elem.set(set_text)
           end
         end
         @elem.value.should == set_text
-        Logging.log.debug "WrapWatir: The text entry worked"
+        @session.log.debug "WrapWatir: The text entry worked"
 
         return self
 
@@ -89,20 +89,20 @@ module Gless
         @elem.set
 
         @num_retries.times do |x|
-          Logging.log.debug "WrapWatir: Checking that the radio selection worked"
+          @session.log.debug "WrapWatir: Checking that the radio selection worked"
           @elem = @browser.send(@orig_type, @orig_selector_args)
           if @elem.set? == true
             break
           else
-            Logging.log.debug "WrapWatir: It did not; sleeping for #{@wait_time} seconds"
+            @session.log.debug "WrapWatir: It did not; sleeping for #{@wait_time} seconds"
             sleep @wait_time
-            Logging.log.debug "WrapWatir: Retrying."
+            @session.log.debug "WrapWatir: Retrying."
             wrapper_logging('set', [])
             @elem.set
           end
         end
         @elem.set?.should be_true
-        Logging.log.debug "WrapWatir: The radio set worked"
+        @session.log.debug "WrapWatir: The radio set worked"
 
         return self
 

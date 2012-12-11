@@ -20,7 +20,7 @@ module Gless
     # one thing that can happen when you click a button or whatever.
     attr_reader :acceptable_pages
 
-    # This exists only to be called by `inherited` on
+    # This exists only to be called by +inherited+ on
     # Gless::BasePage; see documentation there.
     def self.add_page_class( klass )
       @@page_classes ||= []
@@ -28,8 +28,11 @@ module Gless
     end
 
 
-    def initialize( browser, config, application )
-      Logging.log.debug "Session: Initializing with #{browser.inspect}"
+    def initialize( browser, config, logger, application )
+      @logger = logger
+
+      log.debug "Session: Initializing with #{browser.inspect}"
+
       @browser = browser
       @application = application
       @pages = Hash.new
@@ -41,7 +44,7 @@ module Gless
         @pages[sc] = sc.new( @browser, self, @application )
       end
 
-      Logging.log.debug "Session: Final pages table: #{@pages.keys.map { |x| x.name }}"
+      log.debug "Session: Final pages table: #{@pages.keys.map { |x| x.name }}"
 
       return self
     end
@@ -50,16 +53,20 @@ module Gless
       @config.get(*args)
     end
 
+    def log
+      @logger
+    end
+
     def session_logging(m, args)
       if m.inspect =~ /(password|login)/i or args.inspect =~ /(password|login)/i
-        Logging.log.debug "Session: Doing something with passwords, redacted."
+        log.debug "Session: Doing something with passwords, redacted."
       else
-        Logging.log.debug "Session: method_missing for #{m} with arguments #{args.inspect}"
+        log.debug "Session: method_missing for #{m} with arguments #{args.inspect}"
       end
     end
 
     def enter(pklas)
-      Logging.log.info "Session: Entering the site directly using the entry point for the #{pklas.name} page class"
+      log.info "Session: Entering the site directly using the entry point for the #{pklas.name} page class"
       @current_page = pklas
       @pages[pklas].enter
       # Needs to run through our custom acceptable_pages= method
@@ -101,22 +108,22 @@ module Gless
     # not we freak out.
     #
     def acceptable_pages=(newpage)
-      Logging.log.debug "Session: changing acceptable pages list to #{newpage}"
+      log.debug "Session: changing acceptable pages list to #{newpage}"
       @acceptable_pages = (check_acceptable_pages newpage).flatten
-      Logging.log.info "Session: acceptable pages list has been changed to: #{@acceptable_pages}"
+      log.info "Session: acceptable pages list has been changed to: #{@acceptable_pages}"
     end
 
     # By default, pick the right page and pass it on
     def method_missing(m, *args, &block)
       session_logging(m, args)
 
-      Logging.log.debug "Session: check if we've changed pages: #{@browser.title}, #{@browser.url}, #{@previous_url}, #{@current_page}, #{@acceptable_pages}"
+      log.debug "Session: check if we've changed pages: #{@browser.title}, #{@browser.url}, #{@previous_url}, #{@current_page}, #{@acceptable_pages}"
 
       # Changed URL means we've changed pages.  Our current page no
       # longer being in the acceptable pages list means we *should*
       # have changed pages. So we check both.
       if @browser.url == @previous_url && @acceptable_pages.member?( @current_page )
-        Logging.log.debug "Session: doesn't look like we've moved."
+        log.debug "Session: doesn't look like we've moved."
       else
         # See if we're on one of the acceptable pages; wait until we
         # are for "timeout" seconds.
@@ -131,12 +138,12 @@ module Gless
           end
 
           @acceptable_pages.each do |page|
-            Logging.log.debug "Session: Checking our current url, #{@browser.url}, for a match in #{page.name}: #{@pages[page].match_url(@browser.url)}"
+            log.debug "Session: Checking our current url, #{@browser.url}, for a match in #{page.name}: #{@pages[page].match_url(@browser.url)}"
             if @pages[page].match_url(@browser.url)
               good_page    = true
               @current_page = page
               new_page = @pages[page]
-              Logging.log.debug "Session: we seem to be on #{page.name} at #{@browser.url}"
+              log.debug "Session: we seem to be on #{page.name} at #{@browser.url}"
               break
             end
           end
@@ -149,14 +156,14 @@ module Gless
 
         good_page.should be_true, "Current URL is #{@browser.url}, which doesn't match any of the acceptable pages: #{@acceptable_pages}"
 
-        Logging.log.debug "Session: checking for arrival at #{new_page.class.name}"
+        log.debug "Session: checking for arrival at #{new_page.class.name}"
         new_page.arrived?.should be_true
 
         url=@browser.url
-        Logging.log.debug "Session: refreshed browser URL: #{url}"
+        log.debug "Session: refreshed browser URL: #{url}"
         new_page.match_url(url).should be_true
 
-        Logging.log.info "Session: We are currently on page #{new_page.class.name}, as we should be"
+        log.info "Session: We are currently on page #{new_page.class.name}, as we should be"
 
         @previous_url = url
       end
@@ -164,12 +171,12 @@ module Gless
       cpage = @pages[@current_page]
 
       if m.inspect =~ /(password|login)/i or args.inspect =~ /(password|login)/i
-        Logging.log.debug "Session: dispatching method #{m} with args [redacted; password maybe] to #{cpage}"
+        log.debug "Session: dispatching method #{m} with args [redacted; password maybe] to #{cpage}"
       else
-        Logging.log.debug "Session: dispatching method #{m} with args #{args.inspect} to #{cpage}"
+        log.debug "Session: dispatching method #{m} with args #{args.inspect} to #{cpage}"
       end
       retval = cpage.send(m, *args, &block)
-      Logging.log.debug "Session: method returned #{retval}"
+      log.debug "Session: method returned #{retval}"
 
       retval
     end
