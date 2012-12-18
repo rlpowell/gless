@@ -89,6 +89,7 @@ module Gless
     def add_to_replay_log( browser, session )
       @ssnum = @ssnum + 1
 
+      if session.get_config :global, :screenshots
       begin
         browser.driver.save_screenshot "#{@replay_path}/screenshot_#{@ssnum}.png"
 
@@ -105,7 +106,8 @@ module Gless
           @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'>Screenshot</a>"
         end
       rescue Exception => e
-        @log.info "Screenshot failed with exception #{e}"
+          @normal_log.warn "Screenshot failed with exception #{e}"
+        end
       end
 
       html=browser.html
