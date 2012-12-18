@@ -48,6 +48,16 @@ module Gless
       @click_destination = click_destination
     end
 
+    # Passes everything through to the underlying Watir object, but
+    # with logging.
+    def method_missing(m, *args, &block)
+      wrapper_logging(m, args)
+      @elem.send(m, *args, &block)
+    end
+
+    # Used to log all pass through behaviours.  In debug mode,
+    # displays details about what method was passed through, and the
+    # nature of the element in question.
     def wrapper_logging(m, args)
       if @orig_selector_args.inspect =~ /password/i
         @session.log.debug "WrapWatir: Doing something with passwords, redacted."
@@ -64,11 +74,9 @@ module Gless
       end
     end
 
-    def method_missing(m, *args, &block)
-      wrapper_logging(m, args)
-      @elem.send(m, *args, &block)
-    end
-
+    # A wrapper around Watir's click; handles the changing of
+    # acceptable pages (i.e. click_destination processing, see
+    # {Gless::BasePage} and {Gless::Session} for more details).
     def click
       if @click_destination
         @session.log.debug "WrapWatir: A #{@elem.class.name} element identified by: #{@orig_selector_args.inspect} has a special destination when clicked, #{@click_destination}"
@@ -79,18 +87,26 @@ module Gless
       @elem.click
     end
 
+    # Used by `set`, see description there.
     def set_retries!(retries)
       @num_retries=retries
 
       return self
     end
 
+    # Used by `set`, see description there.
     def set_timeout!(timeout)
       @wait_time=timeout
 
       return self
     end
 
+    # A wrapper around Watir's set element that retries operations.
+    # In particular, text fields and radio elements are checked to
+    # make sure that what we intended to enter *actually* got
+    # entered.  set_retries! and set_timeout! set the number of
+    # times to try to get things working and the delay between ecah
+    # such try.
     def set(*args)
       wrapper_logging('set', args)
 
