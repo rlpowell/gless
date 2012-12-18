@@ -87,14 +87,14 @@ module Gless
       @elem.click
     end
 
-    # Used by `set`, see description there.
+    # Used by +set+, see description there.
     def set_retries!(retries)
       @num_retries=retries
 
       return self
     end
 
-    # Used by `set`, see description there.
+    # Used by +set+, see description there.
     def set_timeout!(timeout)
       @wait_time=timeout
 
