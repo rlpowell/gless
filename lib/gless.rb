@@ -1,4 +1,9 @@
 
+# The Gless module itself only defines a setup method; all the meat
+# is in the other classes, especially {Gless::Session}.  See the
+# README for a general overview; it lives at
+# https://github.com/rlpowell/gless , which is also the home of this
+# project.
 module Gless
   # The current version number.
   VERSION = '1.0.0'
