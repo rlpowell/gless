@@ -1,9 +1,42 @@
 
 module Gless
 
+  # This class, as its name sort of implies, is used to wrap Watir
+  # elements.  Every element on a Gless page (i.e. any descentant of
+  # Gless::BasePage that uses the "element" class mothed) is not
+  # actually a Watir element but rather a Gless::WrapWatir instead.
+  #
+  # Most things are passed through to the underlying Watir element,
+  # but extensive logging occurs (in fact, if you have debugging on,
+  # this is where screenshots occur), and various extremely
+  # low-level checks are done to try to work around potential
+  # Selenium problems.  For example, all text entry is checked at
+  # this level and retried until it works, since Selenium/WebDriver
+  # tends to be flaky about that (and it's even worse if the browser
+  # window gets focus during the text entry).
+  #
+  # This shouldn't ever need to be used by a user; it's done
+  # automatically by the +element+ class method.
   class Gless::WrapWatir
     include RSpec::Matchers
 
+    # Sets up the wrapping.
+    #
+    # @param [Gless::Browser] browser
+    # @param [Gless::Session] session
+    # @param [Symbol] orig_type The type of the element; normally
+    #   with watir you'd do something like
+    #
+    #     watir.button :value, 'Submit'
+    #
+    #   In that expression, "button" is the orig_type.
+    # @param [Hash] orig_selector_args In the example
+    #   above,
+    #
+    #     { :value => 'Submit' }
+    #
+    #   is the selector arguments.
+    # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
     def initialize(browser, session, orig_type, orig_selector_args, click_destination)
       @browser = browser
       @session = session
@@ -14,6 +47,7 @@ module Gless
       @wait_time = 30
       @click_destination = click_destination
     end
+
     def wrapper_logging(m, args)
       if @orig_selector_args.inspect =~ /password/i
         @session.log.debug "WrapWatir: Doing something with passwords, redacted."
