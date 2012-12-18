@@ -17,7 +17,7 @@ end
 
 desc "Build then install the gless gem."
 task :install => :build do
-  require 'gless/version'
+  require 'gless'
   sh %{gem install gless-#{Gless::VERSION}.gem}
 end
 
