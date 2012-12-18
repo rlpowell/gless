@@ -183,6 +183,100 @@ module Gless
       self.acceptable_pages = pklas
     end
 
+    # Wait for long-term AJAX-style processing, i.e. watch the page
+    # for extended amounts of time until particular events have
+    # occured.
+    #
+    # @param [String] message The text to print to the user each
+    #   time the page is not completely loaded.
+    # @param [Hash] opts Various named options.
+    #
+    # @option opts [Integer] numtimes The number of times to test the page.
+    # @option opts [Integer] interval The number of seconds to delay
+    #   between each check.
+    # @option opts [Array] any_elements Watir page elements, if any
+    #   of them are present, the page load is considered complete.
+    # @option opts all_elements Watir page elements, if all of them
+    #   are present, the page load is considered complete.
+    #
+    # @yieldreturn [Boolean] An optional Proc/code block; if
+    #   present, it is run before each page check.  This is so
+    #   simple interactions can occur without waiting for the
+    #   timeout, and so the whole process can be short-circuited.
+    #   If the block returns true, the long_wait ends successfully.
+    #
+    # @example
+    #
+    #   @session.long_wait "Cloud Application: Still waiting for the environment to be deleted.", :any_elements => [ @session.no_environments, @session.environment_deleted ]
+    #
+    # @return [Boolean] Returns true if, on any page test, the
+    #   element conditions were met or the block returned true (at
+    #   which point it exits immediately), false otherwise.
+    def long_wait message, opts = {}
+      # Merge in the defaults
+      opts = { :numtimes => 120, :interval => 30, :any_elements => nil, :all_elements => nil }.merge(opts)
+
+      begin
+        opts[:numtimes].times do |count|
+          # Run a code block if given; might do other checks, or
+          # click things we need to finish, or whatever
+          if block_given?
+            self.log.debug "Session: long_wait: yielding to passed block."
+            blockout = yield
+            if blockout == true
+              return true
+            end
+          end
+
+          # If any of these are present, we're done.
+          if opts[:any_elements]
+            opts[:any_elements].each do |elem|
+              self.log.debug "Session: long_wait: in any_elements, looking for #{elem}"
+              if elem.present?
+                self.log.debug "Session: long_wait: completed due to the presence of #{elem}"
+                return true
+              end
+            end
+          end
+          # If all of these are present, we're done.
+          if opts[:all_elements]
+            all_elems=true
+            opts[:all_elements].each do |elem|
+              self.log.debug "Session: long_wait: in all_elements, looking for #{elem}"
+              if ! elem.present?
+                all_elems=false
+              end
+            end
+            if all_elems == true
+              self.log.debug "Session: long_wait: completed due to the presence of all off #{opts[:all_elements]}"
+              return true
+            end
+          end
+
+          # We're still here, let the user know
+          self.log.info message
+
+          if (((count + 1) % 20) == 0) && (self.get_config :global, :debug)
+            self.log.debug "Session: long_wait: We've waited a multiple of 20 times, so giving you a debugger; 'c' to continue."
+            debugger
+          end
+
+          sleep opts[:interval]
+        end
+      rescue Exception => e
+        self.log.debug "Session: long_wait: Had an exception #{e}"
+        if self.get_config :global, :debug
+          self.log.debug "Session: long_wait: Had an exception in debug mode: #{e.inspect}"
+          self.log.debug "Session: long_wait: Had an exception in debug mode: #{e.message}"
+          self.log.debug "Session: long_wait: Had an exception in debug mode: #{e.backtrace.join("\n")}"
+
+          self.log.debug "Session: long_wait: Had an exception, and you're in debug mode, so giving you a debugger."
+          debugger
+        end
+      end
+
+      return false
+    end
 
     # Deals with popup alerts in the browser (i.e. the javascript
     # alert() function).  Always clicks "ok" or equivalent.
