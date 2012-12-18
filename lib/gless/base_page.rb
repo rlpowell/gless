@@ -296,9 +296,13 @@ module Gless
           end
         end
 
-        if all_validate && match_url( @browser.url )
-          @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found."
+        if all_validate
+          if match_url( @browser.url )
+            @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found."
           break
+        else
+            @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found, but the current URL (#{@browser.url}) doesn't match the expected URL(s) (#{self.class.url_patterns})"
+          end
         else
           @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: not all validator elements found, trying again."
         end
@@ -321,7 +325,10 @@ module Gless
         return true
       rescue Exception => e
         if @session.get_config :global, :debug
-          @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: something doesn't match (url or title or expected elements), giving you a debugger"
+          @session.log.debug "GenericBasePage, for #{self.class.name}, arrived?: something doesn't match (url or title or expected elements), exception information follows, then giving you a debugger"
+          @session.log.debug "Gless::BasePage: Had an exception in debug mode: #{e.inspect}"
+          @session.log.debug "Gless::BasePage: Had an exception in debug mode: #{e.message}"
+          @session.log.debug "Gless::BasePage: Had an exception in debug mode: #{e.backtrace.join("\n")}"
           debugger
         else
           return false
