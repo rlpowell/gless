@@ -299,8 +299,8 @@ module Gless
         if all_validate
           if match_url( @browser.url )
             @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found."
-          break
-        else
+            break
+          else
             @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found, but the current URL (#{@browser.url}) doesn't match the expected URL(s) (#{self.class.url_patterns})"
           end
         else
