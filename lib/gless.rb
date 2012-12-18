@@ -1,6 +1,7 @@
 
 module Gless
-  VERSION = '0.0.1'
-e nd
+  # The current version number.
+  VERSION = '1.0.0'
+end
 
 Dir["#{File.dirname(__FILE__)}/gless/*.rb"].each {|r| load r }
