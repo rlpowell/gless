@@ -11,7 +11,7 @@ module Gless
     # @param [String] dir The directory name that holds the config
     #   files (under lib/config in said directory).
     #
-    # = Examples
+    # @example
     #
     #   Gless::EnvConfig.env_dir = File.dirname(__FILE__)
     #
@@ -46,7 +46,7 @@ module Gless
     # Get an element from the configuration.  Takes an arbitrary
     # number of arguments; each is taken to be a hash key.
     #
-    # = Examples
+    # @example
     #
     #  @config.get :global, :debug 
     #
