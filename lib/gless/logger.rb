@@ -90,22 +90,22 @@ module Gless
       @ssnum = @ssnum + 1
 
       if session.get_config :global, :screenshots
-      begin
-        browser.driver.save_screenshot "#{@replay_path}/screenshot_#{@ssnum}.png"
+        begin
+          browser.driver.save_screenshot "#{@replay_path}/screenshot_#{@ssnum}.png"
 
-        if session.get_config :global, :thumbnails
-          require 'mini_magick'
+          if session.get_config :global, :thumbnails
+            require 'mini_magick'
 
-          image = MiniMagick::Image.open("#{@replay_path}/screenshot_#{@ssnum}.png")
-          image.resize "400"
-          image.write "#{@replay_path}/screenshot_#{@ssnum}_thumb.png"
-          FileUtils.chmod 0755, "#{@replay_path}/screenshot_#{@ssnum}_thumb.png"
+            image = MiniMagick::Image.open("#{@replay_path}/screenshot_#{@ssnum}.png")
+            image.resize "400"
+            image.write "#{@replay_path}/screenshot_#{@ssnum}_thumb.png"
+            FileUtils.chmod 0755, "#{@replay_path}/screenshot_#{@ssnum}_thumb.png"
 
-          @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'><img src='screenshot_#{@ssnum}_thumb.png' /></a>"
-        else
-          @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'>Screenshot</a>"
-        end
-      rescue Exception => e
+            @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'><img src='screenshot_#{@ssnum}_thumb.png' /></a>"
+          else
+            @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'>Screenshot</a>"
+          end
+        rescue Exception => e
           @normal_log.warn "Screenshot failed with exception #{e}"
         end
       end
