@@ -18,7 +18,26 @@ module Gless
     # A list of page classes of pages that it's OK for us to be on.
     # Usually just one, but some site workflows might have more than
     # one thing that can happen when you click a button or whatever.
+    #
+    # When you assign a value here, a fair bit of processing is
+    # done.  Most of the actual work is in check_acceptable_pages
+    #
+    # The user can give us a class, a symbol, or a list of those; no
+    # matter what, we return a list.  That list is of possible pages
+    # that, if we turn out to be on one of them, that's OK, and if
+    # not we freak out.
+    #
+    # @param [Class, Symbol, Array] newpages A page class, or a
+    #   symbol naming a page class, or an array of those, for which
+    #   pages are acceptable.
     attr_reader :acceptable_pages
+
+    # See docs for :acceptable_pages
+    def acceptable_pages= newpage
+      log.debug "Session: changing acceptable pages list to #{newpage}"
+      @acceptable_pages = (check_acceptable_pages newpage).flatten
+      log.info "Session: acceptable pages list has been changed to: #{@acceptable_pages}"
+    end
 
     # This exists only to be called by +inherited+ on
     # Gless::BasePage; see documentation there.
@@ -28,6 +47,15 @@ module Gless
     end
 
 
+    # Sets up the session object.  As the core abstraction layer that
+    # sits in the middle of everything, this requires a number of
+    # arguments. :)
+    #
+    # @param [Gless::Browser] browser
+    # @param [Gless::EnvConfig] config
+    # @param [Gless::Logger] logger
+    # @param [Object] application See the README for a description
+    #   of the stuff the application object is expected to have.
     def initialize( browser, config, logger, application )
       @logger = logger
 
@@ -49,73 +77,31 @@ module Gless
       return self
     end
 
+    # Just passes through to the Gless::EnvConfig component's +get+
+    # method.
     def get_config(*args)
       @config.get(*args)
     end
 
+    # Just a shortcut to get to the Gless::Logger object.
     def log
       @logger
     end
 
-    def session_logging(m, args)
+    # Anything that we don't otherwise recognize is passed on to the
+    # current underlying page object (i.e. descendant of
+    # Gless::BasePage).
+    #
+    # This gets complicated because of the state checking: we test
+    # extensively that we're on the page that we think we should be
+    # on before passing things on to the page object.
+    def method_missing(m, *args, &block)
+      # Do some logging.
       if m.inspect =~ /(password|login)/i or args.inspect =~ /(password|login)/i
         log.debug "Session: Doing something with passwords, redacted."
       else
         log.debug "Session: method_missing for #{m} with arguments #{args.inspect}"
       end
-    end
-
-    def enter(pklas)
-      log.info "Session: Entering the site directly using the entry point for the #{pklas.name} page class"
-      @current_page = pklas
-      @pages[pklas].enter
-      # Needs to run through our custom acceptable_pages= method
-      self.acceptable_pages = pklas
-    end
-
-    # FIXME: Check the text of the alert to see that it's the one
-    # we want.
-    # 
-    # Note that we're using @browser because things can be a bit
-    # wonky during an alert; we don't want to run session's "are we
-    # on the right page?" tests, or even talk to the page object.
-    def handle_alert
-      @browser.alert.wait_until_present
-
-      if @browser.alert.exists?
-        @browser.alert.ok
-      end
-    end
-
-    def check_acceptable_pages newpage
-      if newpage.kind_of? Class
-        return [ newpage ]
-      elsif newpage.kind_of? Symbol
-        return [ @pages.keys.find { |x| x.name =~ /#{newpage.to_s}$/ } ]
-      elsif newpage.kind_of? Array
-        return newpage.map { |p| check_acceptable_pages p }
-      else
-        raise "You set the acceptable_pages to #{newpage.class.name}; unhandled"
-      end
-    end
-
-    # Handle the user changing what page we're on.  Most of the work
-    # is in check_acceptable_pages
-    #
-    # The user can give us a class, a symbol, or a list of those; no
-    # matter what, we return a list.  That list is of possible pages
-    # that, if we turn out to be on one of them, that's OK, and if
-    # not we freak out.
-    #
-    def acceptable_pages=(newpage)
-      log.debug "Session: changing acceptable pages list to #{newpage}"
-      @acceptable_pages = (check_acceptable_pages newpage).flatten
-      log.info "Session: acceptable pages list has been changed to: #{@acceptable_pages}"
-    end
-
-    # By default, pick the right page and pass it on
-    def method_missing(m, *args, &block)
-      session_logging(m, args)
 
       log.debug "Session: check if we've changed pages: #{@browser.title}, #{@browser.url}, #{@previous_url}, #{@current_page}, #{@acceptable_pages}"
 
@@ -180,6 +166,60 @@ module Gless
 
       retval
     end
+
+    # This function is used to go to an intitial entry point for a
+    # website.  The page in question must have had set_entry_url run
+    # in its class definition, to define how to do this.  This setup
+    # exists because explaining to the session that we really should
+    # be on that page is a bit tricky.
+    #
+    # @param [Class] pklas The class for the page object that has a
+    #   set_entry_url that we are using.
+    def enter(pklas)
+      log.info "Session: Entering the site directly using the entry point for the #{pklas.name} page class"
+      @current_page = pklas
+      @pages[pklas].enter
+      # Needs to run through our custom acceptable_pages= method
+      self.acceptable_pages = pklas
+    end
+
+
+    # Deals with popup alerts in the browser (i.e. the javascript
+    # alert() function).  Always clicks "ok" or equivalent.
+    #
+    # FIXME: Check the text of the alert to see that it's the one
+    # we want.
+    # 
+    # Note that we're using @browser because things can be a bit
+    # wonky during an alert; we don't want to run session's "are we
+    # on the right page?" tests, or even talk to the page object.
+    def handle_alert
+      @browser.alert.wait_until_present
+
+      if @browser.alert.exists?
+        @browser.alert.ok
+      end
+    end
+
+    # Does the heavy lifting, such as it is, for +acceptable_pages=+
+    #
+    # @param [Class, Symbol, Array] newpage A page class, or a
+    #   symbol naming a page class, or an array of those, for which
+    #   pages are acceptable.
+    #
+    # @return [Array<Gless::BasePage>]
+    def check_acceptable_pages newpage
+      if newpage.kind_of? Class
+        return [ newpage ]
+      elsif newpage.kind_of? Symbol
+        return [ @pages.keys.find { |x| x.name =~ /#{newpage.to_s}$/ } ]
+      elsif newpage.kind_of? Array
+        return newpage.map { |p| check_acceptable_pages p }
+      else
+        raise "You set the acceptable_pages to #{newpage.class.name}; unhandled"
+      end
+    end
+
   end
 
 end
