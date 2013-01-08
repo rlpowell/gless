@@ -6,7 +6,7 @@
 # project.
 module Gless
   # The current version number.
-  VERSION = '1.0.1'
+  VERSION = '1.0.3'
 
   # Sets up the config, logger and browser instances, the ordering
   # of which is slightly tricky.

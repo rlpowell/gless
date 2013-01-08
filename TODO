@@ -1,4 +1,6 @@
+- add confirmation checking to checkbox.set/clear
 - it would be nice to retry clicking an elements automatically if the expected
   page transition doesn't occur ; have a session variable for
   whether we should retry, and if we should, if .arrived? is false,
   retry the last action
+

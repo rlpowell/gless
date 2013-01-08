@@ -44,7 +44,8 @@ module Gless
     end
 
     # Get an element from the configuration.  Takes an arbitrary
-    # number of arguments; each is taken to be a hash key.
+    # number of arguments; each is taken to be a hash key.  With no
+    # arguments, returns the whole configuration.
     #
     # @example
     #
@@ -53,7 +54,15 @@ module Gless
     # @return [Object] what's left after following each key; could be
     #   basically anything.
     def get( *args )
+      if args.empty?
+        return @config
+      end
+
       return get_sub_tree( @config, *args )
+    end
+
+    def merge(hash)
+      @config.merge!(hash)
     end
 
     private
@@ -63,9 +72,7 @@ module Gless
       # Can't use debug logging here, as it maybe isn't turned on yet
       # puts "In Gless::EnvConfig, get_sub_tree: items: #{items}, elem: #{elem}, args: #{args}"
 
-      if items.nil?
-        raise "Could not locate '#{elem}' in YAML config" if sub_tree.nil?
-      end
+      raise "Could not locate '#{elem}' in YAML config" if items.nil?
 
       new_items = items[elem.to_sym]
       raise "Could not locate '#{elem}' in YAML config" if new_items.nil?
