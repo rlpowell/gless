@@ -128,7 +128,7 @@ module Gless
             @elem.set(set_text)
           end
         end
-        @elem.value.should == set_text
+        @elem.value.to_s.should == set_text.to_s
         @session.log.debug "WrapWatir: The text entry worked"
 
         return self
