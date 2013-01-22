@@ -3,7 +3,7 @@
 module TestGithub
   class SearchPage < TestGithub::BasePage
 
-    element :search_input  , :text_field , :class => 'text'  , :validator => true
+    element :search_input  , :text_field , :class => 'search-page-input' , :validator => true
     element :search_button , :button     , :text => 'Search' , :validator => true
 
     url %r{^:base_url/search}
