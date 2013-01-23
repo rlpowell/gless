@@ -105,24 +105,21 @@ module Gless
 
       log.debug "Session: check if we've changed pages: #{@browser.title}, #{@browser.url}, #{@previous_url}, #{@current_page}, #{@acceptable_pages}"
 
-      # Changed URL means we've changed pages.  Our current page no
-      # longer being in the acceptable pages list means we *should*
-      # have changed pages. So we check both.
-      if @browser.url == @previous_url && @acceptable_pages.member?( @current_page )
+      # Changed URL means we've changed pages, probably by surprise
+      # since desired page changes happen in Gless::WrapWatir#click
+      if @browser.url == @previous_url
         log.debug "Session: doesn't look like we've moved."
       else
-        # See if we're on one of the acceptable pages; wait until we
-        # are for "timeout" seconds.
+        # See if we're on one of the acceptable pages.  We do no
+        # significant waiting because Gless::WrapWatir#click should
+        # have handeled that.
         good_page=false
         new_page=nil
-        @timeout.times do
-          if @acceptable_pages.nil?
-            # If we haven't gone anywhere yet, anything is good
-            good_page = true
-            new_page = @pages[@current_page]
-            break
-          end
-
+        if @acceptable_pages.nil?
+          # If we haven't gone anywhere yet, anything is good
+          good_page = true
+          new_page = @pages[@current_page]
+        else
           @acceptable_pages.each do |page|
             log.debug "Session: Checking our current url, #{@browser.url}, for a match in #{page.name}: #{@pages[page].match_url(@browser.url)}"
             if @pages[page].match_url(@browser.url)
@@ -130,20 +127,19 @@ module Gless
               @current_page = page
               new_page = @pages[page]
               log.debug "Session: we seem to be on #{page.name} at #{@browser.url}"
-              break
             end
           end
-
-          if good_page
-            break
-          end
-          sleep 1
         end
 
         good_page.should be_true, "Current URL is #{@browser.url}, which doesn't match any of the acceptable pages: #{@acceptable_pages}"
 
-        log.debug "Session: checking for arrival at #{new_page.class.name}"
-        new_page.arrived?.should be_true
+        # While this is very thorough, it slows things down quite a
+        # bit, and should mostly be covered by
+        # Gless::WrapWatir#click ; leaving here in case we decide we
+        # need it later.
+        #
+        # log.debug "Session: checking for arrival at #{new_page.class.name}"
+        # new_page.arrived?.should be_true
 
         url=@browser.url
         log.debug "Session: refreshed browser URL: #{url}"
@@ -153,6 +149,8 @@ module Gless
 
         @previous_url = url
       end
+
+      # End of page checking code.
 
       cpage = @pages[@current_page]
 
@@ -312,6 +310,97 @@ module Gless
       else
         raise "You set the acceptable_pages to #{newpage.class.name}; unhandled"
       end
+    end
+
+    # Does the heavy lifting of moving between pages when an element
+    # has a new page destination.  Mostly used by Gless::WrapWatir
+    #
+    # Note that this attempts to click on the button (or do whatever
+    # else the passed block does) many times in an attempt to get to
+    # the right page.  If multiple attempts are a problem, you
+    # should circumvent this method; {WrapWatir#click_once} exists
+    # for this purpose.
+    #
+    # @param [Class, Symbol, Array] newpage The page(s) that we
+    #   could be moving to; same idea as {acceptable_pages=}
+    #
+    # @yield A required Proc/code block that contains the action to
+    #   take to attempt to change pages (i.e. clicking on a button
+    #   or whatever).  May be run multiple times, as the whole point
+    #   here is to keep trying until it works.
+    #
+    # @return (Boolean, String) Returns both whether it managed to
+    #   get to the page in question and, if not, what sort of errors
+    #   were seen.
+    def change_pages click_destination
+      self.acceptable_pages = click_destination
+
+      log.debug "Session: change_pages: checking to see if we have changed pages: #{@browser.title}, #{@current_page}, #{@acceptable_pages}"
+
+      good_page = false
+      error_message = ''
+      new_page = nil
+
+      # See if we're on one of the acceptable pages; wait until we
+      # are for "timeout" seconds.
+      @timeout.times do
+        self.log.debug "Session: change_pages: yielding to passed block."
+        yield
+        self.log.debug "Session: change_pages: done yielding to passed block."
+
+        if @acceptable_pages.member?( @current_page )
+          good_page = true
+          break
+        else
+          if @acceptable_pages.nil?
+            # If we haven't gone anywhere yet, anything is good
+            log.debug "Session: change_pages: no acceptable pages, so accepting the current page."
+            good_page    = true
+            new_page = @pages[@current_page]
+            break
+          end
+
+          url=@browser.url
+          log.debug "Session: change_pages: refreshed browser URL: #{url}"
+
+          @acceptable_pages.each do |page|
+            log.debug "Session: change_pages: Checking our current url, #{url}, for a match in #{page.name}: #{@pages[page].match_url(url)}"
+            if @pages[page].match_url(url) and @pages[page].arrived? == true
+              good_page    = true
+              @current_page = page
+              new_page = @pages[page]
+              log.debug "Session: change_pages: we seem to be on #{page.name} at #{url}"
+            end
+          end
+
+          if not new_page.match_url(url)
+            good_page = false
+            error_message = "Current URL is #{url}, which doesn't match that expected for any of the acceptable pages: #{@acceptable_pages}"
+            next
+          end
+
+          log.debug "Session: change_pages: checking for arrival at #{new_page.class.name}"
+          if not new_page.arrived?
+            good_page = false
+            error_message = "The current page, at #{url}, doesn't have all of the elements for any of the acceptable pages: #{@acceptable_pages}"
+            next
+          end
+
+          if good_page == true
+            break
+          else
+            sleep 1
+          end
+        end
+      end
+
+      if good_page
+        log.info "Session: change_pages: We have successfully moved to page #{new_page.class.name}"
+
+        @previous_url = url
+      end
+
+      return good_page, error_message
     end
 
   end

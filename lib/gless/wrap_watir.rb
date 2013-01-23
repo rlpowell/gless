@@ -77,7 +77,11 @@ module Gless
     # A wrapper around Watir's click; handles the changing of
     # acceptable pages (i.e. click_destination processing, see
     # {Gless::BasePage} and {Gless::Session} for more details).
-    def click
+    #
+    # Unconditionally clicks once, without any error handling; if
+    # you want to try to execute a page transition no matter what,
+    # just use +click+
+    def click_once
       if @click_destination
         @session.log.debug "WrapWatir: A #{@elem.class.name} element identified by: #{@orig_selector_args.inspect} has a special destination when clicked, #{@click_destination}"
         @session.acceptable_pages = @click_destination
@@ -85,6 +89,39 @@ module Gless
       wrapper_logging('click', nil)
       @session.log.debug "WrapWatir: Calling click on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
       @elem.click
+    end
+
+    # A wrapper around Watir's click; handles the changing of
+    # acceptable pages (i.e. click_destination processing, see
+    # {Gless::BasePage} and {Gless::Session} for more details).
+    #
+    # If you've clicked on an element with a click_destination, it
+    # then calls {Gless::Session#change_pages} to do the actual page
+    # transition.  As such, it may actually click several times,
+    # it will keep trying until it works; if that's not what you're
+    # looking for, use click_once
+    def click
+      if @click_destination
+        @session.log.debug "WrapWatir: click: A #{@elem.class.name} element identified by: #{@orig_selector_args.inspect} has a special destination when clicked, #{@click_destination}"
+        change_pages_out, change_pages_message = @session.change_pages( @click_destination ) do
+          wrapper_logging('click', nil)
+          @session.log.debug "WrapWatir: click: Calling click on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
+          if @elem.exists?
+            @elem.click
+          end
+          if block_given?
+            yield
+          end
+        end
+        # If the return value isn't true, use it as the message to
+        # print.
+        @session.log.debug "WrapWatir: click: change pages results: #{change_pages_out}, #{change_pages_message}"
+        change_pages_out.should be_true, change_pages_message
+      else
+        wrapper_logging('click', nil)
+        @session.log.debug "WrapWatir: click: Calling click on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
+        @elem.click
+      end
     end
 
     # Used by +set+, see description there.
