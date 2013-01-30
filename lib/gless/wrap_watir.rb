@@ -22,6 +22,19 @@ module Gless
 
     # Sets up the wrapping.
     #
+    # As a special case, note that the selectors can include a :proc
+    # element, in which case this is taken to be a Proc that takes
+    # the browser as an argument.  This is used for cases where
+    # finding the element has to happen at runtime or is
+    # particularily complicated.  In this case the rest of the
+    # selectors should include notes the element for debugging
+    # purposes.  An example of such an element:
+    #
+    #    Gless::WrapWatir.new(@browser, @session, :input, { :custom => "the first input under the div for tab #{tab} with the id 'task_name'", :proc => Proc.new { |browser| browser.div( :id  => "tabs-#{tab}" ).input( :id => 'task_name' ) } }, false )
+    #
+    # The wrapper only considers *visible* matching elements, unless
+    # the selectors include ":invisible => true".
+    #
     # @param [Gless::Browser] browser
     # @param [Gless::Session] session
     # @param [Symbol] orig_type The type of the element; normally
@@ -42,34 +55,104 @@ module Gless
       @session = session
       @orig_type = orig_type
       @orig_selector_args = orig_selector_args
-      @elem = @browser.send(@orig_type, @orig_selector_args)
       @num_retries = 3
       @wait_time = 30
       @click_destination = click_destination
+    end
+
+    # Finds the element in question; deals with the fact that the
+    # selector could actually be a Proc.
+    #
+    # Has no parameters because it uses @orig_type and
+    # @orig_selector_args.  If @orig_selector_args has a :proc
+    # element, runs that with the browser as an argument, otherwise
+    # just passes those variables to the Watir browser as normal.
+    def find_elem
+      # Do we want to return more than on element?
+      multiples = false
+
+      if @orig_selector_args.has_key? :proc
+        # If it's a Proc, it can handle its own visibility checking
+        return @orig_selector_args[:proc].call @browser
+      else
+        # We want all the relevant elements, so force that if it's
+        # not what was asked for
+        type = @orig_type.to_s
+        if type =~ %r{s$}
+          multiples=true
+        else
+          type = type + 's'
+        end
+        elems = @browser.send(type, @orig_selector_args)
+      end
+
+      @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} initial version: #{elems.inspect}"
+
+      if elems.nil?
+        @session.log.debug "WrapWatir: find_elem: can't find any element identified by #{trimmed_selectors.inspect}"
+        return nil
+      end
+
+      if multiples
+        # We're OK returning the whole set
+        @session.log.debug "WrapWatir: find_elem: multiples were requested; returning #{elems.inspect}"
+        return elems
+      elsif elems.length <= 1
+        # It's not a collection; just return it.
+        @session.log.debug "WrapWatir: find_elem: only one item found; returning #{elems[0].inspect}"
+        return elems[0]
+      else
+        unless @orig_selector_args.has_key? :invisible and @orig_selector_args[:invisible]
+          if trimmed_selectors.inspect !~ /password/i
+            @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} before visibility selection: #{elems.inspect}"
+          end
+
+          # Find only visible elements
+          elem = elems.find { |x| x.present? and x.visible? }
+
+          if elem.nil?
+            # If there *are* no visible ones, take what we've got
+            elem = elems[0]
+          end
+
+          if trimmed_selectors.inspect !~ /password/i
+            @session.log.debug "WrapWatir: find_elem: element identified by #{trimmed_selectors.inspect} after visibility selection: #{elem.inspect}"
+          end
+
+          return elem
+        end
+      end
+    end
+
+    # Pulls any procs out of the selectors for debugging purposes
+    def trimmed_selectors
+      @orig_selector_args.reject { |k,v| k == :proc }
     end
 
     # Passes everything through to the underlying Watir object, but
     # with logging.
     def method_missing(m, *args, &block)
       wrapper_logging(m, args)
-      @elem.send(m, *args, &block)
+      find_elem.send(m, *args, &block)
     end
 
     # Used to log all pass through behaviours.  In debug mode,
     # displays details about what method was passed through, and the
     # nature of the element in question.
     def wrapper_logging(m, args)
-      if @orig_selector_args.inspect =~ /password/i
+      elem = find_elem
+
+      if trimmed_selectors.inspect =~ /password/i
         @session.log.debug "WrapWatir: Doing something with passwords, redacted."
       else
         if @session.get_config :global, :debug
           @session.log.add_to_replay_log( @browser, @session )
         end
 
-        @session.log.debug "WrapWatir: Calling #{m} with arguments #{args.inspect} on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
+        @session.log.debug "WrapWatir: Calling #{m} with arguments #{args.inspect} on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
 
-        if @elem.present? && @elem.class.name == 'Watir::HTMLElement'
-          @session.log.warn "FIXME: You have been lazy and said that something is of type 'element'; its actual type is  #{@elem.to_subtype.class.name}; the element is identified by #{@orig_selector_args.inspect}"
+        if elem.present? && elem.class.name == 'Watir::HTMLElement'
+          @session.log.warn "FIXME: You have been lazy and said that something is of type 'element'; its actual type is  #{elem.to_subtype.class.name}; the element is identified by #{trimmed_selectors.inspect}"
         end
       end
     end
@@ -82,13 +165,15 @@ module Gless
     # you want to try to execute a page transition no matter what,
     # just use +click+
     def click_once
+      elem = find_elem
+
       if @click_destination
-        @session.log.debug "WrapWatir: A #{@elem.class.name} element identified by: #{@orig_selector_args.inspect} has a special destination when clicked, #{@click_destination}"
+        @session.log.debug "WrapWatir: A #{elem.class.name} element identified by: #{trimmed_selectors.inspect} has a special destination when clicked, #{@click_destination}"
         @session.acceptable_pages = @click_destination
       end
       wrapper_logging('click', nil)
-      @session.log.debug "WrapWatir: Calling click on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
-      @elem.click
+      @session.log.debug "WrapWatir: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
+      elem.click
     end
 
     # A wrapper around Watir's click; handles the changing of
@@ -101,13 +186,15 @@ module Gless
     # it will keep trying until it works; if that's not what you're
     # looking for, use click_once
     def click
+      elem = find_elem
+
       if @click_destination
-        @session.log.debug "WrapWatir: click: A #{@elem.class.name} element identified by: #{@orig_selector_args.inspect} has a special destination when clicked, #{@click_destination}"
+        @session.log.debug "WrapWatir: click: A #{elem.class.name} element identified by: #{trimmed_selectors.inspect} has a special destination when clicked, #{@click_destination}"
         change_pages_out, change_pages_message = @session.change_pages( @click_destination ) do
           wrapper_logging('click', nil)
-          @session.log.debug "WrapWatir: click: Calling click on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
-          if @elem.exists?
-            @elem.click
+          @session.log.debug "WrapWatir: click: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
+          if elem.exists?
+            elem.click
           end
           if block_given?
             yield
@@ -119,8 +206,8 @@ module Gless
         change_pages_out.should be_true, change_pages_message
       else
         wrapper_logging('click', nil)
-        @session.log.debug "WrapWatir: click: Calling click on a #{@elem.class.name} element identified by: #{@orig_selector_args.inspect}"
-        @elem.click
+        @session.log.debug "WrapWatir: click: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
+        elem.click
       end
     end
 
@@ -146,55 +233,55 @@ module Gless
     # such try.
     def set(*args)
       wrapper_logging('set', args)
+      elem = find_elem
 
       # Double-check text fields
-      if @elem.class.name == 'Watir::TextField'
+      if elem.class.name == 'Watir::TextField'
         set_text = args[0]
-        @elem.set(set_text)
+        @session.log.debug "WrapWatir: set: setting text on #{elem.inspect}/#{elem.html} to #{set_text}"
+        elem.set(set_text)
 
         @num_retries.times do |x|
           @session.log.debug "WrapWatir: Checking that text entry worked"
-          @elem = @browser.send(@orig_type, @orig_selector_args)
-          if @elem.value == set_text
+          if elem.value == set_text
             break
           else
             @session.log.debug "WrapWatir: It did not; sleeping for #{@wait_time} seconds"
             sleep @wait_time
             @session.log.debug "WrapWatir: Retrying."
             wrapper_logging('set', set_text)
-            @elem.set(set_text)
+            elem.set(set_text)
           end
         end
-        @elem.value.to_s.should == set_text.to_s
+        elem.value.to_s.should == set_text.to_s
         @session.log.debug "WrapWatir: The text entry worked"
 
         return self
 
         # Double-check radio buttons
-      elsif @elem.class.name == 'Watir::Radio'
+      elsif elem.class.name == 'Watir::Radio'
         wrapper_logging('set', [])
-        @elem.set
+        elem.set
 
         @num_retries.times do |x|
           @session.log.debug "WrapWatir: Checking that the radio selection worked"
-          @elem = @browser.send(@orig_type, @orig_selector_args)
-          if @elem.set? == true
+          if elem.set? == true
             break
           else
             @session.log.debug "WrapWatir: It did not; sleeping for #{@wait_time} seconds"
             sleep @wait_time
             @session.log.debug "WrapWatir: Retrying."
             wrapper_logging('set', [])
-            @elem.set
+            elem.set
           end
         end
-        @elem.set?.should be_true
+        elem.set?.should be_true
         @session.log.debug "WrapWatir: The radio set worked"
 
         return self
 
       else
-        @elem.set(*args)
+        elem.set(*args)
       end
     end
   end
