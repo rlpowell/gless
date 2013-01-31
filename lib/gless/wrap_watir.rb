@@ -81,8 +81,13 @@ module Gless
         if type =~ %r{s$}
           multiples=true
         else
-          type = type + 's'
+          if Watir::Container.method_defined?(type + 's')
+            type = type + 's'
+          elsif Watir::Container.method_defined?(type + 'es')
+            type = type + 'es'
+          end
         end
+        @session.log.debug "WrapWatir: find_elem: elements type: #{type}"
         elems = @browser.send(type, @orig_selector_args)
       end
 
@@ -91,6 +96,11 @@ module Gless
       if elems.nil?
         @session.log.debug "WrapWatir: find_elem: can't find any element identified by #{trimmed_selectors.inspect}"
         return nil
+      end
+
+      # We got something unexpected; just give it back
+      if ! elems.is_a?(Watir::Container)
+        return elems
       end
 
       if multiples
