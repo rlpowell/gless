@@ -68,69 +68,94 @@ module Gless
     # element, runs that with the browser as an argument, otherwise
     # just passes those variables to the Watir browser as normal.
     def find_elem
-      # Do we want to return more than on element?
-      multiples = false
+      tries=0
+      begin
+        # Do we want to return more than on element?
+        multiples = false
 
-      if @orig_selector_args.has_key? :proc
-        # If it's a Proc, it can handle its own visibility checking
-        return @orig_selector_args[:proc].call @browser
-      else
-        # We want all the relevant elements, so force that if it's
-        # not what was asked for
-        type = @orig_type.to_s
-        if type =~ %r{s$}
-          multiples=true
+        if @orig_selector_args.has_key? :proc
+          # If it's a Proc, it can handle its own visibility checking
+          return @orig_selector_args[:proc].call @browser
         else
-          if Watir::Container.method_defined?(type + 's')
-            type = type + 's'
-          elsif Watir::Container.method_defined?(type + 'es')
-            type = type + 'es'
+          # We want all the relevant elements, so force that if it's
+          # not what was asked for
+          type = @orig_type.to_s
+          if type =~ %r{s$}
+            multiples=true
+          else
+            if Watir::Container.method_defined?(type + 's')
+              type = type + 's'
+            elsif Watir::Container.method_defined?(type + 'es')
+              type = type + 'es'
+            end
+          end
+          @session.log.debug "WrapWatir: find_elem: elements type: #{type}"
+          elems = @browser.send(type, @orig_selector_args)
+        end
+
+        @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} initial version: #{elems.inspect}"
+
+        if elems.nil? or elems.length == 0
+          @session.log.debug "WrapWatir: find_elem: can't find any element identified by #{trimmed_selectors.inspect}"
+          # Generally, watir-webdriver code expects *something*
+          # back, and uses .present? to see if it's really there, so
+          # we get the singleton to satisfy that need.
+          return @browser.send(@orig_type, @orig_selector_args)
+        end
+
+        # We got something unexpected; just give it back
+        if ! elems.is_a?(Watir::ElementCollection)
+          @session.log.debug "WrapWatir: find_elem: elements aren't a collection; returning them"
+          return elems
+        end
+
+        if multiples
+          # We're OK returning the whole set
+          @session.log.debug "WrapWatir: find_elem: multiples were requested; returning #{elems.inspect}"
+          return elems
+        elsif elems.length == 1
+          # It's not a collection; just return it.
+          @session.log.debug "WrapWatir: find_elem: only one item found; returning #{elems[0].inspect}"
+          return elems[0]
+        else
+          unless @orig_selector_args.has_key? :invisible and @orig_selector_args[:invisible]
+            if trimmed_selectors.inspect !~ /password/i
+              @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} before visibility selection: #{elems.inspect}"
+            end
+
+            # Find only visible elements
+            elem = elems.find { |x| x.present? and x.visible? }
+
+            if elem.nil?
+              # If there *are* no visible ones, take what we've got
+              elem = elems[0]
+            end
+
+            if trimmed_selectors.inspect !~ /password/i
+              @session.log.debug "WrapWatir: find_elem: element identified by #{trimmed_selectors.inspect} after visibility selection: #{elem.inspect}"
+            end
+
+            return elem
           end
         end
-        @session.log.debug "WrapWatir: find_elem: elements type: #{type}"
-        elems = @browser.send(type, @orig_selector_args)
-      end
+      rescue Exception => e
+        @session.log.warn "WrapWatir: find_elem: Had an exception #{e}"
+        if @session.get_config :global, :debug
+          @session.log.debug "WrapWatir: find_elem: Had an exception in debug mode: #{e.inspect}"
+          @session.log.debug "WrapWatir: find_elem: Had an exception in debug mode: #{e.message}"
+          @session.log.debug "WrapWatir: find_elem: Had an exception in debug mode: #{e.backtrace.join("\n")}"
 
-      @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} initial version: #{elems.inspect}"
-
-      if elems.nil?
-        @session.log.debug "WrapWatir: find_elem: can't find any element identified by #{trimmed_selectors.inspect}"
-        return nil
-      end
-
-      # We got something unexpected; just give it back
-      if ! elems.is_a?(Watir::Container)
-        return elems
-      end
-
-      if multiples
-        # We're OK returning the whole set
-        @session.log.debug "WrapWatir: find_elem: multiples were requested; returning #{elems.inspect}"
-        return elems
-      elsif elems.length <= 1
-        # It's not a collection; just return it.
-        @session.log.debug "WrapWatir: find_elem: only one item found; returning #{elems[0].inspect}"
-        return elems[0]
-      else
-        unless @orig_selector_args.has_key? :invisible and @orig_selector_args[:invisible]
-          if trimmed_selectors.inspect !~ /password/i
-            @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} before visibility selection: #{elems.inspect}"
-          end
-
-          # Find only visible elements
-          elem = elems.find { |x| x.present? and x.visible? }
-
-          if elem.nil?
-            # If there *are* no visible ones, take what we've got
-            elem = elems[0]
-          end
-
-          if trimmed_selectors.inspect !~ /password/i
-            @session.log.debug "WrapWatir: find_elem: element identified by #{trimmed_selectors.inspect} after visibility selection: #{elem.inspect}"
-          end
-
-          return elem
+          @session.log.debug "WrapWatir: find_elem: Had an exception, and you're in debug mode, so giving you a debugger. Use 'continue' to proceed."
+          debugger
         end
+
+        if tries < 3
+          @session.log.debug "WrapWatir: find_elem: Retrying after exception."
+          retry
+        else
+          @session.log.debug "WrapWatir: find_elem: Giving up after exception."
+        end
+        tries += 1
       end
     end
 

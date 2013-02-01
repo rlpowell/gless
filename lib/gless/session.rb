@@ -262,15 +262,18 @@ module Gless
           sleep opts[:interval]
         end
       rescue Exception => e
-        self.log.debug "Session: long_wait: Had an exception #{e}"
+        self.log.warn "Session: long_wait: Had an exception #{e}"
         if self.get_config :global, :debug
           self.log.debug "Session: long_wait: Had an exception in debug mode: #{e.inspect}"
           self.log.debug "Session: long_wait: Had an exception in debug mode: #{e.message}"
           self.log.debug "Session: long_wait: Had an exception in debug mode: #{e.backtrace.join("\n")}"
 
-          self.log.debug "Session: long_wait: Had an exception, and you're in debug mode, so giving you a debugger."
+          self.log.debug "Session: long_wait: Had an exception, and you're in debug mode, so giving you a debugger.  Use 'continue' to proceed."
           debugger
         end
+
+        self.log.debug "Session: long_wait: Retrying after exception."
+        retry
       end
 
       return false
