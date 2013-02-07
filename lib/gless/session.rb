@@ -353,8 +353,11 @@ module Gless
 
         if @acceptable_pages.member?( @current_page )
           good_page = true
+          new_page = @current_page
           break
         else
+          new_page = nil
+
           if @acceptable_pages.nil?
             # If we haven't gone anywhere yet, anything is good
             log.debug "Session: change_pages: no acceptable pages, so accepting the current page."
@@ -376,17 +379,19 @@ module Gless
             end
           end
 
-          if not new_page.match_url(url)
-            good_page = false
-            error_message = "Current URL is #{url}, which doesn't match that expected for any of the acceptable pages: #{@acceptable_pages}"
-            next
-          end
+          if new_page
+            if not new_page.match_url(url)
+              good_page = false
+              error_message = "Current URL is #{url}, which doesn't match that expected for any of the acceptable pages: #{@acceptable_pages}"
+              next
+            end
 
-          log.debug "Session: change_pages: checking for arrival at #{new_page.class.name}"
-          if not new_page.arrived?
-            good_page = false
-            error_message = "The current page, at #{url}, doesn't have all of the elements for any of the acceptable pages: #{@acceptable_pages}"
-            next
+            log.debug "Session: change_pages: checking for arrival at #{new_page.class.name}"
+            if not new_page.arrived?
+              good_page = false
+              error_message = "The current page, at #{url}, doesn't have all of the elements for any of the acceptable pages: #{@acceptable_pages}"
+              next
+            end
           end
 
           if good_page == true
