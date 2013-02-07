@@ -18,6 +18,7 @@ module Gless
   # This shouldn't ever need to be used by a user; it's done
   # automatically by the +element+ class method.
   class Gless::WrapWatir
+    require 'rspec'
     include RSpec::Matchers
 
     # Sets up the wrapping.
