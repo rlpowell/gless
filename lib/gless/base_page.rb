@@ -54,7 +54,7 @@ module Gless
       end
 
       # Calls back to Gless::Session.  See overview documentation
-      # fro +Gless::BasePage+
+      # for +Gless::BasePage+
       def inherited(klass)
         Gless::Session.add_page_class klass
       end
@@ -98,7 +98,7 @@ module Gless
       # That's about as complicated as it gets.
       #
       # The first two arguments (name and type) are required.  The
-      # rest is a hash.  +:validator_elements+ and +:click_destination+
+      # rest is a hash.  +:validator+ and +:click_destination+
       # (see below) have special meaning.
       #
       # Anything else is taken to be a Watir selector.  If no
