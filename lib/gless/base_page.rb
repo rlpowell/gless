@@ -136,9 +136,10 @@ module Gless
         # we add in the default below
         non_selector_opts = [ :validator, :click_destination ]
         if ! opts[:selector]
+          opts[:selector] = {} if ! opts.keys.empty?
           opts.keys.each do |key|
-            if ! non_selector_opts.member?(key)
-              opts[:selector] = { key => opts[key] }
+            if (! non_selector_opts.member?(key)) && (key != :selector)
+              opts[:selector][key] = opts[key]
               opts.delete(key)
             end
           end
