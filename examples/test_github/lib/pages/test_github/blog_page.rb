@@ -5,7 +5,7 @@ module TestGithub
 
     url %r{^:base_url/blog$}
 
-    expected_title 'The Official GitHub Blog · GitHub'
+    expected_title 'The GitHub Blog · GitHub'
 
     # Stub page, but BasePage stuff still works
 

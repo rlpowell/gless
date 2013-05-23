@@ -30,7 +30,7 @@ module Gless
         @browser = Watir::Browser.new(:remote, :url => "http://127.0.0.1:#{port}/wd/hub", :desired_capabilities => capabilities)
       else
         @logger.info "Launching local browser #{browser}"
-        @browser = Watir::Browser.new :browser
+        @browser = Watir::Browser.new browser
       end
     end
 

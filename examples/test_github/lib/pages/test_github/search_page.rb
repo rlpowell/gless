@@ -35,14 +35,14 @@ module TestGithub
     end
 
     def repositories
-      repos = self.divs.select { |div| div.class_name == 'result' }
+      repos = self.lis.select { |li| li.class_name == 'public source' }
 
       @session.log.debug "SearchPage: repositories: repos: #{repos.inspect}"
 
       repositories = Hash.new
       i = 0
       repos.each do |repo|
-        link = repo.h2.a
+        link = repo.h3.a
         data = Hash.new
         data[:index] = i
         data[:link] = link

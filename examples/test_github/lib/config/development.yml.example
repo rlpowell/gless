@@ -3,8 +3,8 @@
     :class: TestGithub
     :url: https://github.com
   :browser:
-    :type: local        # local or remote
-    :browser: firefox	# Which browser to use
+    :type: remote		# Local or remote
+    :browser: chrome	# Which browser to use
     :port: 4444		# If remote, port to connect to the selenimu server, otherwise ignored
   :verbose: false       # Whether to engage in more verbose/info level logging
   :debug: false	        # Whether to engage in debug logging
