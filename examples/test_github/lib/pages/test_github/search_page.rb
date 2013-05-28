@@ -7,6 +7,7 @@ module TestGithub
     element :search_button , :button     , :text => 'Search'             , :validator => true
 
     url %r{^:base_url/search}
+    set_entry_url ':base_url/search'
 
     expected_title %r{^(Code Search · GitHub|Search · \S+ · GitHub)$}
 
