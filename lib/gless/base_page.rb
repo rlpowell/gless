@@ -98,8 +98,8 @@ module Gless
       # That's about as complicated as it gets.
       #
       # The first two arguments (name and type) are required.  The
-      # rest is a hash.  +:validator+ and +:click_destination+
-      # (see below) have special meaning.
+      # rest is a hash.  +:validator+, +:click_destination+, and
+      # +:parent+ (see below) have special meaning.
       #
       # Anything else is taken to be a Watir selector.  If no
       # selector is forthcoming, the name is taken to be the element
@@ -126,6 +126,9 @@ module Gless
       #   bit of the class name of the page that clicking on this
       #   element leads to, if any.
       # 
+      # @option opts [Symbol] :parent (nil) A symbol of a parent element
+      #   to which matching is restricted.
+      # 
       # @option opts [Object] ANY All other opts keys are used as
       #   Watir selectors to find the element on the page.
       def element basename, type, opts = {}
@@ -134,7 +137,7 @@ module Gless
 
         # Promote various other things into selectors; do this before
         # we add in the default below
-        non_selector_opts = [ :validator, :click_destination ]
+        non_selector_opts = [ :validator, :click_destination, :parent ]
         if ! opts[:selector]
           opts[:selector] = {} if ! opts.keys.empty?
           opts.keys.each do |key|
@@ -153,6 +156,8 @@ module Gless
         selector = opts[:selector]
         click_destination = opts[:click_destination]
         validator = opts[:validator]
+        parent = opts[:parent]
+        parent = self.send parent
 
         methname = basename.to_s.tr('-', '_')
 
@@ -168,7 +173,7 @@ module Gless
         end
 
         define_method methname do
-          Gless::WrapWatir.new(@browser, @session, type, selector, click_destination)
+          Gless::WrapWatir.new(@browser, @session, type, selector, click_destination, parent)
         end
       end
 

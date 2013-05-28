@@ -21,6 +21,10 @@ module Gless
     require 'rspec'
     include RSpec::Matchers
 
+    # @return [Gless::WrapWatir] The parent of this element, restricting the
+    #   scope of its selectorselement.
+    attr_accessor :parent
+
     # Sets up the wrapping.
     #
     # As a special case, note that the selectors can include a :proc
@@ -51,7 +55,8 @@ module Gless
     #
     #   is the selector arguments.
     # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
-    def initialize(browser, session, orig_type, orig_selector_args, click_destination)
+    # @param [Gless:WrapWatir] parents The parent elements under which the wrapped element is restricted.
+    def initialize(browser, session, orig_type, orig_selector_args, click_destination, parent)
       @browser = browser
       @session = session
       @orig_type = orig_type
@@ -59,6 +64,7 @@ module Gless
       @num_retries = 3
       @wait_time = 30
       @click_destination = click_destination
+      @parent = parent
     end
 
     # Finds the element in question; deals with the fact that the
@@ -71,7 +77,7 @@ module Gless
     def find_elem
       tries=0
       begin
-        # Do we want to return more than on element?
+        # Do we want to return more than one element?
         multiples = false
 
         if @orig_selector_args.has_key? :proc
@@ -91,7 +97,8 @@ module Gless
             end
           end
           @session.log.debug "WrapWatir: find_elem: elements type: #{type}"
-          elems = @browser.send(type, @orig_selector_args)
+          par = parent ? parent.find_elem : @browser
+          elems = par.send(type, @orig_selector_args)
         end
 
         @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} initial version: #{elems.inspect}"
