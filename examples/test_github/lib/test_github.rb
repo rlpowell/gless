@@ -34,7 +34,7 @@ module TestGithub
     def goto_repository_from_anywhere name, repo_pattern
       @logger.info "TestGithub Application: going to repository #{name}"
 
-      @session.search.click
+      @session.enter TestGithub::SearchPage
 
       @session.search_for name
 
@@ -51,9 +51,6 @@ module TestGithub
 
       @logger.info "TestGithub Application: clicking explore."
       @session.explore.click
-
-      @logger.info "TestGithub Application: clicking search."
-      @session.search.click
 
       @logger.info "TestGithub Application: clicking features."
       @session.features.click
