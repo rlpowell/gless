@@ -3,8 +3,9 @@
 module TestGithub
   class SearchPage < TestGithub::BasePage
 
-    element :search_input  , :text_field , :class => 'search-page-input' , :validator => true
-    element :search_button , :button     , :text => 'Search'             , :validator => true
+    element :search_form   , :form       , :id    => 'search_form'       , :validator => true
+    element :search_input  , :text_field , :class => 'search-page-input' , :validator => true , :parent => :search_form
+    element :search_button , :button     , :text  => 'Search'            , :validator => true , :parent => :search_form
 
     url %r{^:base_url/search}
     set_entry_url ':base_url/search'
