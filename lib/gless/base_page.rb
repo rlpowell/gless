@@ -59,6 +59,16 @@ module Gless
         Gless::Session.add_page_class klass
       end
 
+      # @return [Array<String>] An list of element method names that the page
+      #   model contains.
+      attr_writer :elements
+
+      # @return [Array] Just sets up a default (to wit, []) for
+      #   elements
+      def elements
+        @elements ||= []
+      end
+
       # @return [Array<String>] An list of elements (actually just
       #   their method names) that should *always* exist if this
       #   page is loaded; used to wait for the page to load and
@@ -154,8 +164,9 @@ module Gless
         click_destination = opts[:click_destination]
         validator = opts[:validator]
 
-        methname = basename.to_s.tr('-', '_')
+        methname = basename.to_s.tr('-', '_').to_sym
 
+        elements << methname
         if validator
           # No class-compile-time logging; it's way too much work, as this runs at *rake* time
           # $master_logger.debug "In GenericBasePage, for #{self.name}, element: #{basename} is a validator"
@@ -168,7 +179,7 @@ module Gless
         end
 
         define_method methname do
-          Gless::WrapWatir.new(@browser, @session, type, selector, click_destination)
+          cached_elements[methname] ||= Gless::WrapWatir.new(@browser, @session, type, selector, click_destination)
         end
       end
 
@@ -236,12 +247,14 @@ module Gless
       end
 
       # Fake inheritance time
-      self.class.validator_elements = self.class.validator_elements + self.class.ancestors.map { |x| x.respond_to?( :validator_elements ) ? x.validator_elements : nil }
+      self.class.elements += self.class.ancestors.map { |x| x.respond_to?( :elements ) ? x.elements : nil }
+      self.class.elements = self.class.elements.flatten.compact.uniq
+      self.class.validator_elements += self.class.ancestors.map { |x| x.respond_to?( :validator_elements ) ? x.validator_elements : nil }
       self.class.validator_elements = self.class.validator_elements.flatten.compact.uniq
 
       self.class.url_patterns.map! { |x| substitute x }
 
-      @session.log.debug "In GenericBasePage, for #{self.class.name}, init: class vars: #{self.class.entry_url}, #{self.class.url_patterns}, #{self.class.validator_elements}"
+      @session.log.debug "In GenericBasePage, for #{self.class.name}, init: class vars: #{self.class.entry_url}, #{self.class.url_patterns}, #{self.class.elements}, #{self.class.validator_elements}"
     end
 
     # Return true if the given url matches this page's patterns
@@ -335,6 +348,20 @@ module Gless
           return false
         end
       end
+    end
+
+    #******************************
+    # Object Level
+    #******************************
+
+    # @return [Hash] A hash of cached +WrapWatir+ elements indexed by the
+    #   symbol name.  This hash is cleared whenever the page changes.
+    attr_writer :cached_elements
+
+    # @return [Hash] A hash of cached +WrapWatir+ elements indexed by the
+    #   symbol name.  This hash is cleared whenever the page changes.
+    def cached_elements
+      @cached_elements ||= {}
     end
   end
 end

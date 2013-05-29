@@ -62,13 +62,20 @@ module Gless
     end
 
     # Finds the element in question; deals with the fact that the
-    # selector could actually be a Proc.
+    # selector could actually be a Proc.  If the element has already been
+    # found, return it; to find the element regardless, use find_elem_directly.
     #
     # Has no parameters because it uses @orig_type and
     # @orig_selector_args.  If @orig_selector_args has a :proc
     # element, runs that with the browser as an argument, otherwise
     # just passes those variables to the Watir browser as normal.
     def find_elem
+      @cached_elem ||= find_elem_directly
+    end
+
+    # Find the element in question, regardless of whether the element has
+    # already been identified.
+    def find_elem_directly
       tries=0
       begin
         # Do we want to return more than on element?
