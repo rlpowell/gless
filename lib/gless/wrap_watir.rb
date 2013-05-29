@@ -21,8 +21,8 @@ module Gless
     require 'rspec'
     include RSpec::Matchers
 
-    # @return [Gless::WrapWatir] The parent of this element, restricting the
-    #   scope of its selectorselement.
+    # @return [Gless::WrapWatir] The symbol for the parent of this element,
+    #   restricting the scope of its selectorselement.
     attr_accessor :parent
 
     # Sets up the wrapping.
@@ -42,6 +42,7 @@ module Gless
     #
     # @param [Gless::Browser] browser
     # @param [Gless::Session] session
+    # @param [Gless::BasePage] page
     # @param [Symbol] orig_type The type of the element; normally
     #   with watir you'd do something like
     #
@@ -55,10 +56,11 @@ module Gless
     #
     #   is the selector arguments.
     # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
-    # @param [Gless:WrapWatir] parents The parent elements under which the wrapped element is restricted.
-    def initialize(browser, session, orig_type, orig_selector_args, click_destination, parent)
+    # @param [Gless:WrapWatir] parents The symbol for the parent element under which the wrapped element is restricted.
+    def initialize(browser, session, page, orig_type, orig_selector_args, click_destination, parent)
       @browser = browser
       @session = session
+	  @page = page
       @orig_type = orig_type
       @orig_selector_args = orig_selector_args
       @num_retries = 3
@@ -80,9 +82,11 @@ module Gless
         # Do we want to return more than one element?
         multiples = false
 
+        par = parent ? @page.send(parent).find_elem : @browser
+
         if @orig_selector_args.has_key? :proc
           # If it's a Proc, it can handle its own visibility checking
-          return @orig_selector_args[:proc].call @browser
+          return @orig_selector_args[:proc].call par
         else
           # We want all the relevant elements, so force that if it's
           # not what was asked for
@@ -97,7 +101,6 @@ module Gless
             end
           end
           @session.log.debug "WrapWatir: find_elem: elements type: #{type}"
-          par = parent ? parent.find_elem : @browser
           elems = par.send(type, @orig_selector_args)
         end
 
@@ -108,7 +111,7 @@ module Gless
           # Generally, watir-webdriver code expects *something*
           # back, and uses .present? to see if it's really there, so
           # we get the singleton to satisfy that need.
-          return @browser.send(@orig_type, @orig_selector_args)
+          return par.send(@orig_type, @orig_selector_args)
         end
 
         # We got something unexpected; just give it back

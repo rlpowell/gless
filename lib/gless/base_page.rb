@@ -157,7 +157,6 @@ module Gless
         click_destination = opts[:click_destination]
         validator = opts[:validator]
         parent = opts[:parent]
-        parent = self.send parent
 
         methname = basename.to_s.tr('-', '_')
 
@@ -173,7 +172,7 @@ module Gless
         end
 
         define_method methname do
-          Gless::WrapWatir.new(@browser, @session, type, selector, click_destination, parent)
+          Gless::WrapWatir.new(@browser, @session, self, type, selector, click_destination, parent)
         end
       end
 
