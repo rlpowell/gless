@@ -98,8 +98,8 @@ module Gless
       # That's about as complicated as it gets.
       #
       # The first two arguments (name and type) are required.  The
-      # rest is a hash.  +:validator+, +:click_destination+, and
-      # +:parent+ (see below) have special meaning.
+      # rest is a hash.  +:validator+, +:click_destination+, +:parent+,
+      # and +:proc+ (see below) have special meaning.
       #
       # Anything else is taken to be a Watir selector.  If no
       # selector is forthcoming, the name is taken to be the element
@@ -128,6 +128,12 @@ module Gless
       # 
       # @option opts [Symbol] :parent (nil) A symbol of a parent element
       #   to which matching is restricted.
+      # 
+      # @option opts [Symbol] :proc (nil) If present, specifies a manual,
+      #   low-level procedure to return a watir element, which overrides other
+      #   selectors.  When the watir element is needed, this procedure is
+      #   called with the parent watir element passed as the argument (see
+      #   +:parent+) if it exists, and otherwise the browser.
       # 
       # @option opts [Object] ANY All other opts keys are used as
       #   Watir selectors to find the element on the page.
