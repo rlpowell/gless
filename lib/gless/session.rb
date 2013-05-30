@@ -123,6 +123,7 @@ module Gless
           @acceptable_pages.each do |page|
             log.debug "Session: Checking our current url, #{@browser.url}, for a match in #{page.name}: #{@pages[page].match_url(@browser.url)}"
             if @pages[page].match_url(@browser.url)
+              clear_cache
               good_page    = true
               @current_page = page
               new_page = @pages[page]
@@ -296,6 +297,14 @@ module Gless
       end
     end
 
+    # Clears the cached elements.  Used before each page change.
+    #
+    # @param [Class] page_class The page class of the page whose cached
+    #   elements are to be cleared; defaults to the current page.
+    def clear_cache page_class = nil
+      @pages[page_class || current_page].cached_elements = Hash.new
+    end
+
     # Does the heavy lifting, such as it is, for +acceptable_pages=+
     #
     # @param [Class, Symbol, Array] newpage A page class, or a
@@ -372,6 +381,7 @@ module Gless
           @acceptable_pages.each do |page|
             log.debug "Session: change_pages: Checking our current url, #{url}, for a match in #{page.name}: #{@pages[page].match_url(url)}"
             if @pages[page].match_url(url) and @pages[page].arrived? == true
+              clear_cache
               good_page    = true
               @current_page = page
               new_page = @pages[page]

@@ -10,3 +10,4 @@
   :debug: false	        # Whether to engage in debug logging
   :screenshots: false   # Whether, if debugging is on, to create screenshots as part of the replay log
   :thumbnails: false	# Whether, if screenshots are on, to create small-ish "thumbnail" pictures on the replay page; requires the imagemagick system package and the mini_magick gem
+  :cache: false  # Whether, by default, to cache elements, significantly improving performance.   For individual elements, caching can be disabled by adding ":cache => false" to the element specifier.
