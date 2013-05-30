@@ -297,6 +297,8 @@ module Gless
     def enter
       @session.log.debug "#{self.class.name}: enter"
 
+      raise "#{self.class.name}.enter: no entry_url has been set" if self.class.entry_url.nil?
+
       arrived? do
         @session.log.info "#{self.class.name}: about to goto #{self.class.entry_url} from #{@browser.url}"
         @browser.goto self.class.entry_url
