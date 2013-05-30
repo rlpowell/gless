@@ -51,7 +51,12 @@ module Gless
     #
     #   is the selector arguments.
     # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
-    def initialize(browser, session, orig_type, orig_selector_args, click_destination)
+    # @param [Boolean] cache Whether to cache this element.  If false,
+    #   +find_elem+, unless overridden with its argument, performs a lookup
+    #   each time it is invoked; otherwise, the watir element is recorded
+    #   and kept until the session changes the page.  If nil, the default value
+    #   is retrieved from the config.
+    def initialize(browser, session, orig_type, orig_selector_args, click_destination, cache)
       @browser = browser
       @session = session
       @orig_type = orig_type
@@ -59,6 +64,7 @@ module Gless
       @num_retries = 3
       @wait_time = 30
       @click_destination = click_destination
+      @cache = cache.nil? ? @session.get_config(:global, :cache) : cache
     end
 
     # Finds the element in question; deals with the fact that the
@@ -69,12 +75,23 @@ module Gless
     # @orig_selector_args.  If @orig_selector_args has a :proc
     # element, runs that with the browser as an argument, otherwise
     # just passes those variables to the Watir browser as normal.
-    def find_elem
-      @cached_elem ||= find_elem_directly
+    #
+    # @param [Boolean] use_cache If not nil, overrides the element's +cache+
+    # value.  If false, the element is re-located; otherwise, if the element
+    # has already been found, return it.
+    def find_elem use_cache = nil
+      use_cache = @cache if use_cache.nil?
+      if use_cache
+        @cached_elem ||= find_elem_directly
+      else
+        @cached_elem = find_elem_directly
+      end
     end
 
     # Find the element in question, regardless of whether the element has
-    # already been identified.
+    # already been identified.  The cache is complete ignored and is not
+    # updated.  To update the cache and re-locate the element, use +find_elem
+    # false+
     def find_elem_directly
       tries=0
       begin

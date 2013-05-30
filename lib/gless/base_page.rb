@@ -108,7 +108,7 @@ module Gless
       # That's about as complicated as it gets.
       #
       # The first two arguments (name and type) are required.  The
-      # rest is a hash.  +:validator+ and +:click_destination+
+      # rest is a hash.  +:validator+, +:click_destination+, and +:cache+
       # (see below) have special meaning.
       #
       # Anything else is taken to be a Watir selector.  If no
@@ -144,7 +144,7 @@ module Gless
 
         # Promote various other things into selectors; do this before
         # we add in the default below
-        non_selector_opts = [ :validator, :click_destination ]
+        non_selector_opts = [ :validator, :click_destination, :cache ]
         if ! opts[:selector]
           opts[:selector] = {} if ! opts.keys.empty?
           opts.keys.each do |key|
@@ -163,6 +163,7 @@ module Gless
         selector = opts[:selector]
         click_destination = opts[:click_destination]
         validator = opts[:validator]
+		cache = opts[:cache]
 
         methname = basename.to_s.tr('-', '_').to_sym
 
@@ -179,7 +180,7 @@ module Gless
         end
 
         define_method methname do
-          cached_elements[methname] ||= Gless::WrapWatir.new(@browser, @session, type, selector, click_destination)
+          cached_elements[methname] ||= Gless::WrapWatir.new(@browser, @session, type, selector, click_destination, cache)
         end
       end
 
