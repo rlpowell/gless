@@ -66,7 +66,7 @@ module Gless
     def initialize(browser, session, page, orig_type, orig_selector_args, click_destination, parent, cache)
       @browser = browser
       @session = session
-	  @page = page
+      @page = page
       @orig_type = orig_type
       @orig_selector_args = orig_selector_args
       @num_retries = 3

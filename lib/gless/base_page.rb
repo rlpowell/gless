@@ -150,6 +150,12 @@ module Gless
       # @option opts [Symbol] :parent (nil) A symbol of a parent element
       #   to which matching is restricted.
       # 
+      # @option opts [Symbol] :cache (nil) If non-nil, overrides the default
+      #   cache setting and determines whether caching is enabled for this
+      #   element.  If false, a new look-up will be performed each time the
+      #   element is accessed, and, if true, a look-up will only be performed
+      #   once until the session changes the page.
+      # 
       # @option opts [Symbol] :proc (nil) If present, specifies a manual,
       #   low-level procedure to return a watir element, which overrides other
       #   selectors.  When the watir element is needed, this procedure is
@@ -184,7 +190,7 @@ module Gless
         click_destination = opts[:click_destination]
         validator = opts[:validator]
         parent = opts[:parent]
-		cache = opts[:cache]
+        cache = opts[:cache]
 
         methname = basename.to_s.tr('-', '_').to_sym
 
