@@ -72,6 +72,17 @@ module Gless
         @validator_elements ||= []
       end
 
+      # @return [Array<String>] An list of validator procedures for this page.
+      #   This provides a more low-level version of validator elements.  For
+      #   more information, see the documentation for +add_validator+.
+      attr_writer :validator_blocks
+
+      # @return [Array] Just sets up a default (to wit, []) for
+      #   validator_blocks
+      def validator_blocks
+        @validator_blocks ||= []
+      end
+
       # Specifies the title that this page is expected to have.
       #
       # @param [String,Regexp] expected_title
@@ -180,6 +191,17 @@ module Gless
         define_method methname do
           Gless::WrapWatir.new(@browser, @session, self, type, selector, click_destination, parent)
         end
+      end
+
+      # Adds the given block to the list of validators to this page, which is
+      # run to ensure that the page is loaded.  This provides a low-level
+      # version of validator elements, which has more flexibility in
+      # determining whether the page is loaded.  The block is given two
+      # arguments: the browser, and the session.  The block is expected to
+      # return true if the validation succeeded; i.e., the page is currently
+      # loaded according to the validator's test; and otherwise false.
+      def add_validator &blk
+        validator_blocks << blk
       end
 
       # @return [Rexexp,String] Used to give the URL string or pattern that matches this page; example:
@@ -303,6 +325,13 @@ module Gless
             end
           rescue Watir::Wait::TimeoutError => e
             @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
+            all_validate = false
+          end
+        end
+
+        self.class.validator_blocks.each do |x|
+          if ! x.call @browser, @session
+            @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: a validator block failed."
             all_validate = false
           end
         end
