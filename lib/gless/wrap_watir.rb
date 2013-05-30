@@ -57,7 +57,6 @@ module Gless
     #   is the selector arguments.
     # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
     # @param [Gless:WrapWatir] parents The symbol for the parent element under which the wrapped element is restricted.
-    def initialize(browser, session, page, orig_type, orig_selector_args, click_destination, parent)
     # @param [Boolean] cache Whether to cache this element.  If false,
     #   +find_elem+, unless overridden with its argument, performs a lookup
     #   each time it is invoked; otherwise, the watir element is recorded
