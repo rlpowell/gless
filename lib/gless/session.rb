@@ -287,23 +287,37 @@ module Gless
     # wonky during an alert; we don't want to run session's "are we
     # on the right page?" tests, or even talk to the page object.
     #
-    # @param [String,Regexp] expected_text If not nil, its default value,
-    # the text of the pop-up alert is checked against this parameter; if it
+    # @param [Boolean] wait_for_alert (true) Whether to wait until an alert
+    # is present, failing if the request times out, before processing it;
+    # otherwise, handle any alerts if there are any currently present.
+    #
+    # @param [String,Regexp] expected_text (nil) If not nil, the text of the
+    # pop-up alert is checked against this parameter; if it
     # differs, an exception will be raised.
-    def handle_alert expected_text = nil
-      @browser.alert.wait_until_present
+    def handle_alert wait_for_alert = true, expected_text = nil
+      @browser.alert.wait_until_present if wait_for_alert
 
       if @browser.alert.exists?
-        if expected_text
-          current_text = @browser.alert.text
-          if (expected_text.kind_of? Regexp) ? expected_text !~ current_text : expected_text != current_text
-            msg = "The actual alert text differs from what was expected.  current_text: #{current_text}; expected_text: #{expected_text}"
-            @logger.error msg
-            raise msg
+        begin
+          if expected_text
+            current_text = @browser.alert.text
+            if (expected_text.kind_of? Regexp) ? expected_text !~ current_text : expected_text != current_text
+              msg = "The actual alert text differs from what was expected.  current_text: #{current_text}; expected_text: #{expected_text}"
+              @logger.error msg
+              raise msg
+            end
+          end
+
+          @browser.alert.ok
+        rescue Selenium::WebDriver::Error::NoAlertPresentError => e
+          msg = "Alert no longer exists; likely closed by user: #{e.message}"
+          if wait_for_alert
+            @logger.warn msg
+            raise
+          else
+            @logger.info msg
           end
         end
-
-        @browser.alert.ok
       end
     end
 
