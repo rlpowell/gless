@@ -282,17 +282,27 @@ module Gless
 
     # Deals with popup alerts in the browser (i.e. the javascript
     # alert() function).  Always clicks "ok" or equivalent.
-    #
-    # FIXME: Check the text of the alert to see that it's the one
-    # we want.
     # 
     # Note that we're using @browser because things can be a bit
     # wonky during an alert; we don't want to run session's "are we
     # on the right page?" tests, or even talk to the page object.
-    def handle_alert
+    #
+    # @param [String,Regexp] expected_text If not nil, its default value,
+    # the text of the pop-up alert is checked against this parameter; if it
+    # differs, an exception will be raised.
+    def handle_alert expected_text = nil
       @browser.alert.wait_until_present
 
       if @browser.alert.exists?
+        if expected_text
+          current_text = @browser.alert.text
+          if (expected_text.kind_of? Regexp) ? expected_text !~ current_text : expected_text != current_text
+            msg = "The actual alert text differs from what was expected.  current_text: #{current_text}; expected_text: #{expected_text}"
+            @logger.error msg
+            raise msg
+          end
+        end
+
         @browser.alert.ok
       end
     end
