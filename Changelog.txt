@@ -1,3 +1,5 @@
 - 1.1.0: 29 Jan 2013: By default, "element"s now ignore non-visible
   elements on the page; use { :invisible => true } to get the old
   behaviour.
+- 1.2.0: 10 Jun 2013: Changes by bairyn.  Added caching, finding
+based on parent element, and block validators.
