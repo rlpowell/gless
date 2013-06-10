@@ -21,6 +21,10 @@ module Gless
     require 'rspec'
     include RSpec::Matchers
 
+    # @return [Gless::WrapWatir] The symbol for the parent of this element,
+    #   restricting the scope of its selectorselement.
+    attr_accessor :parent
+
     # Sets up the wrapping.
     #
     # As a special case, note that the selectors can include a :proc
@@ -38,6 +42,7 @@ module Gless
     #
     # @param [Gless::Browser] browser
     # @param [Gless::Session] session
+    # @param [Gless::BasePage] page
     # @param [Symbol] orig_type The type of the element; normally
     #   with watir you'd do something like
     #
@@ -51,32 +56,61 @@ module Gless
     #
     #   is the selector arguments.
     # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
-    def initialize(browser, session, orig_type, orig_selector_args, click_destination)
+    # @param [Gless:WrapWatir] parents The symbol for the parent element under which the wrapped element is restricted.
+    # @param [Boolean] cache Whether to cache this element.  If false,
+    #   +find_elem+, unless overridden with its argument, performs a lookup
+    #   each time it is invoked; otherwise, the watir element is recorded
+    #   and kept until the session changes the page.  If nil, the default value
+    #   is retrieved from the config.
+    def initialize(browser, session, page, orig_type, orig_selector_args, click_destination, parent, cache)
       @browser = browser
       @session = session
+      @page = page
       @orig_type = orig_type
       @orig_selector_args = orig_selector_args
       @num_retries = 3
       @wait_time = 30
       @click_destination = click_destination
+      @parent = parent
+      @cache = cache.nil? ? @session.get_config(:global, :cache) : cache
     end
 
     # Finds the element in question; deals with the fact that the
-    # selector could actually be a Proc.
+    # selector could actually be a Proc.  If the element has already been
+    # found, return it; to find the element regardless, use find_elem_directly.
     #
     # Has no parameters because it uses @orig_type and
     # @orig_selector_args.  If @orig_selector_args has a :proc
     # element, runs that with the browser as an argument, otherwise
     # just passes those variables to the Watir browser as normal.
-    def find_elem
+    #
+    # @param [Boolean] use_cache If not nil, overrides the element's +cache+
+    # value.  If false, the element is re-located; otherwise, if the element
+    # has already been found, return it.
+    def find_elem use_cache = nil
+      use_cache = @cache if use_cache.nil?
+      if use_cache
+        @cached_elem ||= find_elem_directly
+      else
+        @cached_elem = find_elem_directly
+      end
+    end
+
+    # Find the element in question, regardless of whether the element has
+    # already been identified.  The cache is complete ignored and is not
+    # updated.  To update the cache and re-locate the element, use +find_elem
+    # false+
+    def find_elem_directly
       tries=0
       begin
-        # Do we want to return more than on element?
+        # Do we want to return more than one element?
         multiples = false
+
+        par = parent ? @page.send(parent).find_elem : @browser
 
         if @orig_selector_args.has_key? :proc
           # If it's a Proc, it can handle its own visibility checking
-          return @orig_selector_args[:proc].call @browser
+          return @orig_selector_args[:proc].call par
         else
           # We want all the relevant elements, so force that if it's
           # not what was asked for
@@ -91,7 +125,7 @@ module Gless
             end
           end
           @session.log.debug "WrapWatir: find_elem: elements type: #{type}"
-          elems = @browser.send(type, @orig_selector_args)
+          elems = par.send(type, @orig_selector_args)
         end
 
         @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} initial version: #{elems.inspect}"
@@ -101,7 +135,7 @@ module Gless
           # Generally, watir-webdriver code expects *something*
           # back, and uses .present? to see if it's really there, so
           # we get the singleton to satisfy that need.
-          return @browser.send(@orig_type, @orig_selector_args)
+          return par.send(@orig_type, @orig_selector_args)
         end
 
         # We got something unexpected; just give it back

@@ -59,6 +59,16 @@ module Gless
         Gless::Session.add_page_class klass
       end
 
+      # @return [Array<String>] An list of element method names that the page
+      #   model contains.
+      attr_writer :elements
+
+      # @return [Array] Just sets up a default (to wit, []) for
+      #   elements
+      def elements
+        @elements ||= []
+      end
+
       # @return [Array<String>] An list of elements (actually just
       #   their method names) that should *always* exist if this
       #   page is loaded; used to wait for the page to load and
@@ -70,6 +80,17 @@ module Gless
       #   validator_elements
       def validator_elements
         @validator_elements ||= []
+      end
+
+      # @return [Array<String>] An list of validator procedures for this page.
+      #   This provides a more low-level version of validator elements.  For
+      #   more information, see the documentation for +add_validator+.
+      attr_writer :validator_blocks
+
+      # @return [Array] Just sets up a default (to wit, []) for
+      #   validator_blocks
+      def validator_blocks
+        @validator_blocks ||= []
       end
 
       # Specifies the title that this page is expected to have.
@@ -98,8 +119,8 @@ module Gless
       # That's about as complicated as it gets.
       #
       # The first two arguments (name and type) are required.  The
-      # rest is a hash.  +:validator+ and +:click_destination+
-      # (see below) have special meaning.
+      # rest is a hash.  +:validator+, +:click_destination+, +:parent+,
+      # +:proc+, and +:cache+ (see below) have special meaning.
       #
       # Anything else is taken to be a Watir selector.  If no
       # selector is forthcoming, the name is taken to be the element
@@ -126,6 +147,21 @@ module Gless
       #   bit of the class name of the page that clicking on this
       #   element leads to, if any.
       # 
+      # @option opts [Symbol] :parent (nil) A symbol of a parent element
+      #   to which matching is restricted.
+      # 
+      # @option opts [Symbol] :cache (nil) If non-nil, overrides the default
+      #   cache setting and determines whether caching is enabled for this
+      #   element.  If false, a new look-up will be performed each time the
+      #   element is accessed, and, if true, a look-up will only be performed
+      #   once until the session changes the page.
+      # 
+      # @option opts [Symbol] :proc (nil) If present, specifies a manual,
+      #   low-level procedure to return a watir element, which overrides other
+      #   selectors.  When the watir element is needed, this procedure is
+      #   called with the parent watir element passed as the argument (see
+      #   +:parent+) if it exists, and otherwise the browser.
+      # 
       # @option opts [Object] ANY All other opts keys are used as
       #   Watir selectors to find the element on the page.
       def element basename, type, opts = {}
@@ -134,7 +170,7 @@ module Gless
 
         # Promote various other things into selectors; do this before
         # we add in the default below
-        non_selector_opts = [ :validator, :click_destination ]
+        non_selector_opts = [ :validator, :click_destination, :parent, :cache ]
         if ! opts[:selector]
           opts[:selector] = {} if ! opts.keys.empty?
           opts.keys.each do |key|
@@ -153,9 +189,12 @@ module Gless
         selector = opts[:selector]
         click_destination = opts[:click_destination]
         validator = opts[:validator]
+        parent = opts[:parent]
+        cache = opts[:cache]
 
-        methname = basename.to_s.tr('-', '_')
+        methname = basename.to_s.tr('-', '_').to_sym
 
+        elements << methname
         if validator
           # No class-compile-time logging; it's way too much work, as this runs at *rake* time
           # $master_logger.debug "In GenericBasePage, for #{self.name}, element: #{basename} is a validator"
@@ -168,8 +207,19 @@ module Gless
         end
 
         define_method methname do
-          Gless::WrapWatir.new(@browser, @session, type, selector, click_destination)
+          cached_elements[methname] ||= Gless::WrapWatir.new(@browser, @session, self, type, selector, click_destination, parent, cache)
         end
+      end
+
+      # Adds the given block to the list of validators to this page, which is
+      # run to ensure that the page is loaded.  This provides a low-level
+      # version of validator elements, which has more flexibility in
+      # determining whether the page is loaded.  The block is given two
+      # arguments: the browser, and the session.  The block is expected to
+      # return true if the validation succeeded; i.e., the page is currently
+      # loaded according to the validator's test; and otherwise false.
+      def add_validator &blk
+        validator_blocks << blk
       end
 
       # @return [Rexexp,String] Used to give the URL string or pattern that matches this page; example:
@@ -236,12 +286,14 @@ module Gless
       end
 
       # Fake inheritance time
-      self.class.validator_elements = self.class.validator_elements + self.class.ancestors.map { |x| x.respond_to?( :validator_elements ) ? x.validator_elements : nil }
+      self.class.elements += self.class.ancestors.map { |x| x.respond_to?( :elements ) ? x.elements : nil }
+      self.class.elements = self.class.elements.flatten.compact.uniq
+      self.class.validator_elements += self.class.ancestors.map { |x| x.respond_to?( :validator_elements ) ? x.validator_elements : nil }
       self.class.validator_elements = self.class.validator_elements.flatten.compact.uniq
 
       self.class.url_patterns.map! { |x| substitute x }
 
-      @session.log.debug "In GenericBasePage, for #{self.class.name}, init: class vars: #{self.class.entry_url}, #{self.class.url_patterns}, #{self.class.validator_elements}"
+      @session.log.debug "In GenericBasePage, for #{self.class.name}, init: class vars: #{self.class.entry_url}, #{self.class.url_patterns}, #{self.class.elements}, #{self.class.validator_elements}"
     end
 
     # Return true if the given url matches this page's patterns
@@ -264,6 +316,8 @@ module Gless
     # Go to the page from who-cares-where, and make sure we're there
     def enter
       @session.log.debug "#{self.class.name}: enter"
+
+      raise "#{self.class.name}.enter: no entry_url has been set" if self.class.entry_url.nil?
 
       arrived? do
         @session.log.info "#{self.class.name}: about to goto #{self.class.entry_url} from #{@browser.url}"
@@ -293,6 +347,13 @@ module Gless
             end
           rescue Watir::Wait::TimeoutError => e
             @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
+            all_validate = false
+          end
+        end
+
+        self.class.validator_blocks.each do |x|
+          if ! x.call @browser, @session
+            @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: a validator block failed."
             all_validate = false
           end
         end
@@ -335,6 +396,20 @@ module Gless
           return false
         end
       end
+    end
+
+    #******************************
+    # Object Level
+    #******************************
+
+    # @return [Hash] A hash of cached +WrapWatir+ elements indexed by the
+    #   symbol name.  This hash is cleared whenever the page changes.
+    attr_writer :cached_elements
+
+    # @return [Hash] A hash of cached +WrapWatir+ elements indexed by the
+    #   symbol name.  This hash is cleared whenever the page changes.
+    def cached_elements
+      @cached_elements ||= {}
     end
   end
 end

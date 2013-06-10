@@ -123,6 +123,7 @@ module Gless
           @acceptable_pages.each do |page|
             log.debug "Session: Checking our current url, #{@browser.url}, for a match in #{page.name}: #{@pages[page].match_url(@browser.url)}"
             if @pages[page].match_url(@browser.url)
+              clear_cache
               good_page    = true
               @current_page = page
               new_page = @pages[page]
@@ -281,19 +282,51 @@ module Gless
 
     # Deals with popup alerts in the browser (i.e. the javascript
     # alert() function).  Always clicks "ok" or equivalent.
-    #
-    # FIXME: Check the text of the alert to see that it's the one
-    # we want.
     # 
     # Note that we're using @browser because things can be a bit
     # wonky during an alert; we don't want to run session's "are we
     # on the right page?" tests, or even talk to the page object.
-    def handle_alert
-      @browser.alert.wait_until_present
+    #
+    # @param [Boolean] wait_for_alert (true) Whether to wait until an alert
+    # is present, failing if the request times out, before processing it;
+    # otherwise, handle any alerts if there are any currently present.
+    #
+    # @param [String,Regexp] expected_text (nil) If not nil, the text of the
+    # pop-up alert is checked against this parameter; if it
+    # differs, an exception will be raised.
+    def handle_alert wait_for_alert = true, expected_text = nil
+      @browser.alert.wait_until_present if wait_for_alert
 
       if @browser.alert.exists?
-        @browser.alert.ok
+        begin
+          if expected_text
+            current_text = @browser.alert.text
+            if (expected_text.kind_of? Regexp) ? expected_text !~ current_text : expected_text != current_text
+              msg = "The actual alert text differs from what was expected.  current_text: #{current_text}; expected_text: #{expected_text}"
+              @logger.error msg
+              raise msg
+            end
+          end
+
+          @browser.alert.ok
+        rescue Selenium::WebDriver::Error::NoAlertPresentError => e
+          msg = "Alert no longer exists; likely closed by user: #{e.message}"
+          if wait_for_alert
+            @logger.warn msg
+            raise
+          else
+            @logger.info msg
+          end
+        end
       end
+    end
+
+    # Clears the cached elements.  Used before each page change.
+    #
+    # @param [Class] page_class The page class of the page whose cached
+    #   elements are to be cleared; defaults to the current page.
+    def clear_cache page_class = nil
+      @pages[page_class || current_page].cached_elements = Hash.new
     end
 
     # Does the heavy lifting, such as it is, for +acceptable_pages=+
@@ -372,6 +405,7 @@ module Gless
           @acceptable_pages.each do |page|
             log.debug "Session: change_pages: Checking our current url, #{url}, for a match in #{page.name}: #{@pages[page].match_url(url)}"
             if @pages[page].match_url(url) and @pages[page].arrived? == true
+              clear_cache
               good_page    = true
               @current_page = page
               new_page = @pages[page]
