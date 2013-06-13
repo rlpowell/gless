@@ -54,11 +54,27 @@ module Gless
     # @return [Object] what's left after following each key; could be
     #   basically anything.
     def get( *args )
+      r = get_default nil, *args
+      raise "Could not locate '#{args.join '.'}' in YAML config; please ensure that development.yml is up to date." if r.nil?
+      r
+    end
+
+    # Optionally get an element from the configuration, otherwise returning the
+    # default value.
+    #
+    # @example
+    #
+    #  @config.get_default false, :global, :cache
+    #
+    # @return [Object] what's left after following each key, or else the
+    #   default value.
+    def get_default( default, *args )
       if args.empty?
         return @config
       end
 
-      return get_sub_tree( @config, *args )
+      r = get_sub_tree( @config, *args )
+      r.nil? ? default : r
     end
 
     def merge(hash)
@@ -72,10 +88,10 @@ module Gless
       # Can't use debug logging here, as it maybe isn't turned on yet
       # puts "In Gless::EnvConfig, get_sub_tree: items: #{items}, elem: #{elem}, args: #{args}"
 
-      raise "Could not locate '#{elem}' in YAML config" if items.nil?
+      return nil if items.nil?
 
       new_items = items[elem.to_sym]
-      raise "Could not locate '#{elem}' in YAML config" if new_items.nil?
+      return nil if new_items.nil?
 
       if args.empty?
         return new_items

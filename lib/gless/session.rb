@@ -83,6 +83,12 @@ module Gless
       @config.get(*args)
     end
 
+    # Just passes through to the Gless::EnvConfig component's +get_default+
+    # method.
+    def get_config_default(*args)
+      @config.get_default(*args)
+    end
+
     # Just a shortcut to get to the Gless::Logger object.
     def log
       @logger
