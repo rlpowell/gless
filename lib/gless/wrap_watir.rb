@@ -206,7 +206,7 @@ module Gless
     #
     # If caching is enabled, wraps the element to check for stale element
     # reference errors.
-    def method_missing(m, *args, &block)
+    def wrap_watir_call(m, *args, &block)
       wrapper_logging(m, args)
       if ! @cache
         find_elem.send(m, *args, &block)
@@ -287,6 +287,9 @@ module Gless
       end
     end
 
+    # An alias for +wrap_watir_call+; see documentation there.
+    alias_method :method_missing, :wrap_watir_call
+
     # Used to log all pass through behaviours.  In debug mode,
     # displays details about what method was passed through, and the
     # nature of the element in question.
@@ -345,7 +348,7 @@ module Gless
           wrapper_logging('click', nil)
           @session.log.debug "WrapWatir: click: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
           if elem.exists?
-            elem.click
+            wrap_watir_call :click
           end
           if block_given?
             yield
@@ -358,7 +361,7 @@ module Gless
       else
         wrapper_logging('click', nil)
         @session.log.debug "WrapWatir: click: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
-        elem.click
+        wrap_watir_call :click
       end
     end
 
@@ -390,21 +393,21 @@ module Gless
       if elem.class.name == 'Watir::TextField'
         set_text = args[0]
         @session.log.debug "WrapWatir: set: setting text on #{elem.inspect}/#{elem.html} to #{set_text}"
-        elem.set(set_text)
+        wrap_watir_call :set, set_text
 
         @num_retries.times do |x|
           @session.log.debug "WrapWatir: Checking that text entry worked"
-          if elem.value == set_text
+          if wrap_watir_call(:value) == set_text
             break
           else
             @session.log.debug "WrapWatir: It did not; sleeping for #{@wait_time} seconds"
             sleep @wait_time
             @session.log.debug "WrapWatir: Retrying."
             wrapper_logging('set', set_text)
-            elem.set(set_text)
+            wrap_watir_call :set, set_text
           end
         end
-        elem.value.to_s.should == set_text.to_s
+        wrap_watir_call(:value).to_s.should == set_text.to_s
         @session.log.debug "WrapWatir: The text entry worked"
 
         return self
@@ -412,27 +415,27 @@ module Gless
         # Double-check radio buttons
       elsif elem.class.name == 'Watir::Radio'
         wrapper_logging('set', [])
-        elem.set
+        wrap_watir_call :set
 
         @num_retries.times do |x|
           @session.log.debug "WrapWatir: Checking that the radio selection worked"
-          if elem.set? == true
+          if wrap_watir_call(:set?) == true
             break
           else
             @session.log.debug "WrapWatir: It did not; sleeping for #{@wait_time} seconds"
             sleep @wait_time
             @session.log.debug "WrapWatir: Retrying."
             wrapper_logging('set', [])
-            elem.set
+            wrap_watir_call :set
           end
         end
-        elem.set?.should be_true
+        wrap_watir_call(:set?).should be_true
         @session.log.debug "WrapWatir: The radio set worked"
 
         return self
 
       else
-        elem.set(*args)
+        wrap_watir_call(:set, *args)
       end
     end
   end
