@@ -207,7 +207,7 @@ module Gless
         end
 
         define_method methname do
-          cached_elements[methname] ||= Gless::WrapWatir.new(@browser, @session, self, type, selector, click_destination, parent, cache)
+          cached_elements[methname] ||= Gless::WrapWatir.new(methname, @browser, @session, self, type, selector, click_destination, parent, cache)
         end
       end
 

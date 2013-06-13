@@ -40,6 +40,7 @@ module Gless
     # The wrapper only considers *visible* matching elements, unless
     # the selectors include ":invisible => true".
     #
+    # @param [Symbol] name The name of this method; used for debugging.
     # @param [Gless::Browser] browser
     # @param [Gless::Session] session
     # @param [Gless::BasePage] page
@@ -62,7 +63,8 @@ module Gless
     #   each time it is invoked; otherwise, the watir element is recorded
     #   and kept until the session changes the page.  If nil, the default value
     #   is retrieved from the config.
-    def initialize(browser, session, page, orig_type, orig_selector_args, click_destination, parent, cache)
+    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, parent, cache)
+      @name = name
       @browser = browser
       @session = session
       @page = page
@@ -201,9 +203,88 @@ module Gless
 
     # Passes everything through to the underlying Watir object, but
     # with logging.
+    #
+    # If caching is enabled, wraps the element to check for stale element
+    # reference errors.
     def method_missing(m, *args, &block)
       wrapper_logging(m, args)
-      find_elem.send(m, *args, &block)
+      if ! @cache
+        find_elem.send(m, *args, &block)
+      else
+        # Caching is enabled for this element.  We do some complex processing
+        # here to appropriately respond to cases in which caching causes
+        # issues, in which case we let the user know by emitting a helpful
+        # warning and trying again without caching.
+
+        # catch_stale takes an WatirElement with a block and tries running the
+        # block, trying it again with caching disabled if it fails with a
+        # +StaleElementReferenceError+.  This exists to avoid repetition in the
+        # code.
+        catch_stale = -> &block do
+          begin
+            block.call
+          rescue Selenium::WebDriver::Error::StaleElementReferenceError => e
+            warn_prefix = "#{@name}: "
+
+            # The method call did something directly but raised the relevant
+            # exception.  Try without caching enabled.
+
+            @session.log.warn "#{warn_prefix}caught a StaleElementReferenceError; trying without caching..."
+
+            begin
+              r = block.call false
+              @session.log.warn "#{warn_prefix}the call succeeded without caching.  Please add \":cache => false\" to prevent this from occurring; disabling caching for this elem."
+              @cache = false
+              r
+            rescue Selenium::WebDriver::Error::StaleElementReferenceError => e
+              @session.log.error "#{warn_prefix}disabled caching but caught the same type of exception; failing."
+              raise
+            end
+          end
+        end
+
+        # Each method call might do something directly to an element, or it
+        # might return a child element.  In case of the former, we catch
+        # +StaleElementReferenceError+s.  In the case of the latter, wrap the
+        # element.
+        wrap_object = -> wrap_meth, *wrap_args, wrap_block, &gen_elem do
+          catch_stale.call do |use_cache|
+            r = gen_elem.call(use_cache).send(wrap_meth, *wrap_args, &wrap_block)
+
+            # The call itself succeeded, whether we tried disabling caching or
+            # not.
+            if ! ((r.kind_of? Watir::Element) || (r.kind_of? Watir::ElementCollection))
+              # Safe to return.
+              r
+            else
+              # Wrap the result in a new object that catches stale element
+              # reference exceptions and responds appropriately.
+              #
+              # Using a proxy class as a child of +BasicObject+ would be much
+              # simpler, but to avoid problems with code that analyzes the
+              # object's class, we have some more work to do.
+              #
+              # Override each instance method with a wrapper that checks for
+              # stale element reference errors, and then similarly override
+              # +method_missing+.
+              wrapped = r.clone
+              wrapped.class.instance_methods.each do |inst_meth|
+                if inst_meth != :define_singleton_method
+                  wrapped.define_singleton_method inst_meth do |*inst_args, &inst_block|
+                    wrap_object.call(inst_meth, *inst_args, inst_block) {|use_cache| gen_elem.call(use_cache).send(wrap_meth, *wrap_args, &wrap_block)}
+                  end
+                end
+              end
+              wrapped.define_singleton_method :method_missing do |inst_meth, *inst_args, &inst_block|
+                wrap_object.call(inst_meth, *inst_args, inst_block) {|use_cache| gen_elem.call(use_cache).send(wrap_meth, *wrap_args, &wrap_block)}
+              end
+              wrapped
+            end
+          end
+        end
+
+        wrap_object.call(m, *args, block) {|use_cache| find_elem use_cache}
+      end
     end
 
     # Used to log all pass through behaviours.  In debug mode,
