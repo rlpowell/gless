@@ -27,10 +27,10 @@ module Gless
     #
     # @return [Gless::EnvConfig]
     def initialize
-      env = (ENV['ENVIRONMENT'] || 'development').to_sym
+      @env = (ENV['ENVIRONMENT'] || 'development').to_sym
 
-      env_file = "#{@@env_dir}/config/#{env}.yml"
-      raise "You need to create a configuration file named '#{env}.yml' (generated from the ENVIRONMENT environment variable) under #{@@env_dir}/lib/config" unless File.exists? env_file
+      env_file = "#{@@env_dir}/config/#{@env}.yml"
+      raise "You need to create a configuration file named '#{@env}.yml' (generated from the ENVIRONMENT environment variable) under #{@@env_dir}/lib/config" unless File.exists? env_file
 
       @config = YAML::load_file env_file
     end
@@ -55,7 +55,7 @@ module Gless
     #   basically anything.
     def get( *args )
       r = get_default nil, *args
-      raise "Could not locate '#{args.join '.'}' in YAML config; please ensure that development.yml is up to date." if r.nil?
+      raise "Could not locate '#{args.join '.'}' in YAML config; please ensure that '#{@env}.yml' is up to date." if r.nil?
       r
     end
 
