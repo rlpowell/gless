@@ -22,7 +22,7 @@ module Gless
     include RSpec::Matchers
 
     # @return [Symbol, Gless::WrapWatir, Watir::Element, Watir::ElementCollection]
-	#   The symbol for the parent of this element,
+    #   The symbol for the parent of this element,
     #   restricting the scope of its selectorselement.
     attr_accessor :parent
 
@@ -58,13 +58,15 @@ module Gless
     #
     #   is the selector arguments.
     # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
-    # @param [Gless:WrapWatir] parents The symbol for the parent element under which the wrapped element is restricted.
+    # @param [Symbol] parent The symbol for the parent element under which the wrapped element is restricted.
+    # @param [Array<Symbol>] child The list of the symbols of the children over
+    #   which element selection is restricted.
     # @param [Boolean] cache Whether to cache this element.  If false,
     #   +find_elem+, unless overridden with its argument, performs a lookup
     #   each time it is invoked; otherwise, the watir element is recorded
     #   and kept until the session changes the page.  If nil, the default value
     #   is retrieved from the config.
-    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, parent, cache, *args)
+    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, parent, child, cache, *args)
       @name = name
       @browser = browser
       @session = session
@@ -75,6 +77,7 @@ module Gless
       @wait_time = 30
       @click_destination = click_destination
       @parent = parent
+      @child = child
       @cache = cache.nil? ? @session.get_config(:global, :cache) : cache
       @args = [*args]
     end
@@ -89,9 +92,11 @@ module Gless
     # just passes those variables to the Watir browser as normal.
     #
     # @param [Boolean] use_cache If not nil, overrides the element's +cache+
-    # value.  If false, the element is re-located; otherwise, if the element
-    # has already been found, return it.
-    def find_elem use_cache = nil
+    #   value.  If false, the element is re-located; otherwise, if the element
+    #   has already been found, return it.
+    # @param [Boolean] must_exist (true) Assume the element exists; otherwise,
+    #   return nil if an exception is thrown while locating the element.
+    def find_elem use_cache = nil, must_exist = true
       use_cache = @cache if use_cache.nil?
       if use_cache
         @cached_elem ||= find_elem_directly
@@ -104,7 +109,10 @@ module Gless
     # already been identified.  The cache is complete ignored and is not
     # updated.  To update the cache and re-locate the element, use +find_elem
     # false+
-    def find_elem_directly
+    #
+    # @param [Boolean] must_exist (true) Assume the element exists; otherwise,
+    #   return nil if an exception is thrown while locating the element.
+    def find_elem_directly must_exist = true
       tries=0
       begin
         # Do we want to return more than one element?
@@ -117,10 +125,10 @@ module Gless
           par = @page.send(parent).find_elem
         when WrapWatir
           par = parent.find_elem
-		when Watir::Element
-		  par = parent
-		when Watir::ElementCollection
-		  par = parent
+        when Watir::Element
+          par = parent
+        when Watir::ElementCollection
+          par = parent
         end
 
         if @orig_selector_args.has_key? :proc
@@ -140,7 +148,20 @@ module Gless
             end
           end
           @session.log.debug "WrapWatir: find_elem: elements type: #{type}"
-          elems = par.send(type, @orig_selector_args)
+          elems = @child.inject(par.send(type, @orig_selector_args)) do |watir_elems, child_gless_elem_sym|
+            watir_elems.select do |watir_elem|
+              child_watir_elem = @page.send(child_gless_elem_sym).with_parent(watir_elem).find_elem nil, false
+              if child_watir_elem.nil?
+                false
+              else
+                if child_watir_elem.kind_of? Watir::Element
+                  child_watir_elem.exists?
+                else
+                  child_watir_elem.length >= 1
+                end
+              end
+            end
+          end
         end
 
         @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} initial version: #{elems.inspect}"
@@ -168,6 +189,8 @@ module Gless
           @session.log.debug "WrapWatir: find_elem: only one item found; returning #{elems[0].inspect}"
           return elems[0]
         else
+          return nil if elems.length < 1 unless must_exist
+
           unless @orig_selector_args.has_key? :invisible and @orig_selector_args[:invisible]
             if trimmed_selectors.inspect !~ /password/i
               @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} before visibility selection: #{elems.inspect}"
@@ -204,7 +227,7 @@ module Gless
           tries += 1
           retry
         else
-          @session.log.debug "WrapWatir: find_elem: Giving up after exception."
+          @session.log.warn "WrapWatir: find_elem: Giving up after exception."
           raise
         end
       end

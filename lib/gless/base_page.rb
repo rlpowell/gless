@@ -119,7 +119,8 @@ module Gless
       # That's about as complicated as it gets.
       #
       # The first two arguments (name and type) are required.  The
-      # rest is a hash.  +:validator+, +:click_destination+, +:parent+,
+      # rest is a hash.  Six options (see below) have special meaning:
+      # +:validator+, +:click_destination+, +:parent+, +:child+
       # +:proc+, and +:cache+ (see below) have special meaning.
       #
       # Anything else is taken to be a Watir selector.  If no
@@ -149,7 +150,16 @@ module Gless
       # 
       # @option opts [Symbol] :parent (nil) A symbol of a parent element
       #   to which matching is restricted.
-      # 
+      #
+      # @option opts [Symbol, Array<Symbol>] :child (nil) If present, this restricts element
+      #   selection to elements that contain the child element.  The parent
+      #   of the child element is overridden with the element being tested; it
+      #   is therefore safe to set the child element's parent to this one,
+      #   since it won't result in circular reference.  This is useful if an
+      #   element on a page, that must contain a child element that can be located
+      #   with its selectors, is used in another way.  This can be set to an
+      #   array to specify multiple children elements.
+      #
       # @option opts [Symbol] :cache (nil) If non-nil, overrides the default
       #   cache setting and determines whether caching is enabled for this
       #   element.  If false, a new look-up will be performed each time the
@@ -183,7 +193,7 @@ module Gless
 
         # Promote various other things into selectors; do this before
         # we add in the default below
-        non_selector_opts = [ :validator, :click_destination, :parent, :cache ]
+        non_selector_opts = [ :validator, :click_destination, :parent, :cache, :child ]
         if ! opts[:selector]
           opts[:selector] = {} if ! opts.keys.empty?
           opts.keys.each do |key|
@@ -203,6 +213,7 @@ module Gless
         click_destination = opts[:click_destination]
         validator = opts[:validator]
         parent = opts[:parent]
+        child = [opts[:child]].flatten.compact
         cache = opts[:cache]
 
         methname = basename.to_s.tr('-', '_').to_sym
@@ -220,7 +231,7 @@ module Gless
         end
 
         define_method methname do |*args|
-          cached_elements[[methname, *args]] ||= Gless::WrapWatir.new(methname, @browser, @session, self, type, selector, click_destination, parent, cache, *args)
+          cached_elements[[methname, *args]] ||= Gless::WrapWatir.new(methname, @browser, @session, self, type, selector, click_destination, parent, child, cache, *args)
         end
       end
 
