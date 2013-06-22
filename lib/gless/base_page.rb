@@ -411,10 +411,6 @@ module Gless
       end
     end
 
-    #******************************
-    # Object Level
-    #******************************
-
     # @return [Hash] A hash of cached +WrapWatir+ elements indexed by the
     #   symbol name.  This hash is cleared whenever the page changes.
     attr_writer :cached_elements
