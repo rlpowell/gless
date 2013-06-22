@@ -21,7 +21,7 @@ module Gless
     require 'rspec'
     include RSpec::Matchers
 
-    # @return [Gless::WrapWatir] The symbol for the parent of this element,
+    # @return [Symbol, Gless::WrapWatir] The symbol for the parent of this element,
     #   restricting the scope of its selectorselement.
     attr_accessor :parent
 
@@ -75,7 +75,7 @@ module Gless
       @click_destination = click_destination
       @parent = parent
       @cache = cache.nil? ? @session.get_config(:global, :cache) : cache
-	  @args = [*args]
+      @args = [*args]
     end
 
     # Finds the element in question; deals with the fact that the
@@ -109,7 +109,14 @@ module Gless
         # Do we want to return more than one element?
         multiples = false
 
-        par = parent ? @page.send(parent).find_elem : @browser
+        case parent
+        when NilClass
+          par = @browser
+        when Symbol
+          par = @page.send(parent).find_elem
+        when WrapWatir
+          par = parent.find_elem
+        end
 
         if @orig_selector_args.has_key? :proc
           # If it's a Proc, it can handle its own visibility checking
@@ -195,6 +202,14 @@ module Gless
         end
         tries += 1
       end
+    end
+
+    # Retrieve a copy of the gless element with a different parent.  With a
+    # different parent, the copy may refer to a different element.
+    def with_parent(parent)
+      copy = clone
+      copy.parent = parent
+      copy
     end
 
     # Pulls any procs out of the selectors for debugging purposes
@@ -288,8 +303,16 @@ module Gless
       end
     end
 
-    # An alias for +wrap_watir_call+; see documentation there.
-    alias_method :method_missing, :wrap_watir_call
+    # Passes everything through to the underlying Watir object, first checking
+    # whether the method call is the name for another element on the same page,
+    # in which case the second element is re-evaluated with a different parent.
+    def method_missing(m, *args, &block)
+      if @page.class.elements.member? m
+        @page.send(m, *args, &block).with_parent self
+      else
+        wrap_watir_call(m, *args, &block)
+      end
+    end
 
     # Used to log all pass through behaviours.  In debug mode,
     # displays details about what method was passed through, and the
