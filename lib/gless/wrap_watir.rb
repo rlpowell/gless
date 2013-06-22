@@ -306,7 +306,7 @@ module Gless
 
         @session.log.debug "WrapWatir: Calling #{m} with arguments #{args.inspect} on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
 
-        if elem.present? && elem.class.name == 'Watir::HTMLElement'
+        if (elem.respond_to? :present?) && elem.present? && elem.class.name == 'Watir::HTMLElement'
           @session.log.warn "FIXME: You have been lazy and said that something is of type 'element'; its actual type is  #{elem.to_subtype.class.name}; the element is identified by #{trimmed_selectors.inspect}"
         end
       end
