@@ -201,11 +201,12 @@ module Gless
 
         if tries < 3
           @session.log.debug "WrapWatir: find_elem: Retrying after exception."
+          tries += 1
           retry
         else
           @session.log.debug "WrapWatir: find_elem: Giving up after exception."
+          raise
         end
-        tries += 1
       end
     end
 
