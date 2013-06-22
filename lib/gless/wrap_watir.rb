@@ -21,7 +21,8 @@ module Gless
     require 'rspec'
     include RSpec::Matchers
 
-    # @return [Symbol, Gless::WrapWatir] The symbol for the parent of this element,
+    # @return [Symbol, Gless::WrapWatir, Watir::Element, Watir::ElementCollection]
+	#   The symbol for the parent of this element,
     #   restricting the scope of its selectorselement.
     attr_accessor :parent
 
@@ -116,6 +117,10 @@ module Gless
           par = @page.send(parent).find_elem
         when WrapWatir
           par = parent.find_elem
+		when Watir::Element
+		  par = parent
+		when Watir::ElementCollection
+		  par = parent
         end
 
         if @orig_selector_args.has_key? :proc
