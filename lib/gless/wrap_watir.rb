@@ -63,7 +63,7 @@ module Gless
     #   each time it is invoked; otherwise, the watir element is recorded
     #   and kept until the session changes the page.  If nil, the default value
     #   is retrieved from the config.
-    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, parent, cache)
+    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, parent, cache, *args)
       @name = name
       @browser = browser
       @session = session
@@ -75,6 +75,7 @@ module Gless
       @click_destination = click_destination
       @parent = parent
       @cache = cache.nil? ? @session.get_config(:global, :cache) : cache
+	  @args = [*args]
     end
 
     # Finds the element in question; deals with the fact that the
@@ -112,7 +113,7 @@ module Gless
 
         if @orig_selector_args.has_key? :proc
           # If it's a Proc, it can handle its own visibility checking
-          return @orig_selector_args[:proc].call par
+          return @orig_selector_args[:proc].call par, *@args
         else
           # We want all the relevant elements, so force that if it's
           # not what was asked for

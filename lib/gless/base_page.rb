@@ -159,8 +159,21 @@ module Gless
       # @option opts [Symbol] :proc (nil) If present, specifies a manual,
       #   low-level procedure to return a watir element, which overrides other
       #   selectors.  When the watir element is needed, this procedure is
-      #   called with the parent watir element passed as the argument (see
-      #   +:parent+) if it exists, and otherwise the browser.
+      #   called with the parent watir element passed as the first argument (see
+      #   +:parent+) if it exists, and otherwise the browser.  Any arguments
+      #   given to the element at runtime are passed to the procedure after the
+      #   first, parent, argument.  For example, given the following
+      #   definition, where findElement is defined:
+      #
+      #     element :book_list, :ul, :click_destination => :HomePage, :parent => :nonfiction, :proc => -> container, author {...}
+      #
+      #   then whenever +session.home "Robyn Dawes"+ is invoked, the procedure will be passed the
+      #   +:nonfiction+ element and the string "Robyn Dawes", and should return
+      #   a Watir element.
+      #
+      #   Different elements are cached for different
+      #   arguments.  Caching can be disabled for an individual
+      #   element by passing :cache => false.
       # 
       # @option opts [Object] ANY All other opts keys are used as
       #   Watir selectors to find the element on the page.
@@ -206,8 +219,8 @@ module Gless
           # $master_logger.debug "In GenericBasePage, for #{self.name}, element: #{basename} has a special destination when clicked, #{click_destination}"
         end
 
-        define_method methname do
-          cached_elements[methname] ||= Gless::WrapWatir.new(methname, @browser, @session, self, type, selector, click_destination, parent, cache)
+        define_method methname do |*args|
+          cached_elements[[methname, *args]] ||= Gless::WrapWatir.new(methname, @browser, @session, self, type, selector, click_destination, parent, cache, *args)
         end
       end
 
