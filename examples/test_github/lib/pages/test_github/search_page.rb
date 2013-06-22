@@ -7,10 +7,16 @@ module TestGithub
     element :search_input  , :text_field , :class => 'search-page-input' , :validator => true , :parent => :search_form
     element :search_button , :button     , :text  => 'Search'            , :validator => true , :parent => :search_form
 
+    element :repository_list  , :ul   , :class => /\brepolist\b/
+    element :repository_link  , :link , :click_destination => :RepoPage , :parent => :repository_list , :proc => -> repos, name do
+      repos.a(:text => name)
+    end
+    element :repository_elems , :lis  , :class => 'public source'       , :parent => :repository_list
+
     # Test validator blocks.
-	add_validator do |browser, session|
-	  browser.url =~ /search/
-	end
+    add_validator do |browser, session|
+      browser.url =~ /search/
+    end
 
     url %r{^:base_url/search}
     set_entry_url ':base_url/search'
@@ -24,8 +30,7 @@ module TestGithub
 
     def goto_repository name
       @session.log.debug "SearchPage: goto_repository: name: #{name}"
-      (find_repository name)[:link].click
-      @session.acceptable_pages = TestGithub::RepoPage
+      repository_link(name).click
     end
 
     def find_repository name
@@ -42,7 +47,7 @@ module TestGithub
     end
 
     def repositories
-      repos = self.lis.select { |li| li.class_name == 'public source' }
+      repos = repository_elems
 
       @session.log.debug "SearchPage: repositories: repos: #{repos.inspect}"
 
