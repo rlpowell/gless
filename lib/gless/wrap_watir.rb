@@ -59,8 +59,9 @@ module Gless
     #   is the selector arguments.
     # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
     # @param [Symbol] parent The symbol for the parent element under which the wrapped element is restricted.
-    # @param [Array<Symbol>] child The list of the symbols of the children over
-    #   which element selection is restricted.
+    # @param [Array<Array<Object>>] child The list of of the children over which
+    #   element selection is restricted.  Each Array contains the symbol of the
+    #   element and the arguments passed to it.
     # @param [Boolean] cache Whether to cache this element.  If false,
     #   +find_elem+, unless overridden with its argument, performs a lookup
     #   each time it is invoked; otherwise, the watir element is recorded
@@ -156,9 +157,9 @@ module Gless
             end
           end
           @session.log.debug "WrapWatir: find_elem: elements type: #{type}"
-          elems = @child.inject(par.send(type, @orig_selector_args)) do |watir_elems, child_gless_elem_sym|
+          elems = @child.inject(par.send(type, @orig_selector_args)) do |watir_elems, child_gless_elem_arg|
             watir_elems.select do |watir_elem|
-              child_watir_elem = @page.send(child_gless_elem_sym).with_parent(watir_elem).find_elem nil, false
+              child_watir_elem = @page.send(child_gless_elem_arg[0], *child_gless_elem_arg[1..-1]).with_parent(watir_elem).find_elem nil, false
               if child_watir_elem.nil?
                 false
               else

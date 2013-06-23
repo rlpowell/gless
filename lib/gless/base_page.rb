@@ -162,14 +162,27 @@ module Gless
       # @option opts [Symbol] :parent (nil) A symbol of a parent element
       #   to which matching is restricted.
       #
-      # @option opts [Symbol, Array<Symbol>] :child (nil) If present, this restricts element
-      #   selection to elements that contain the child element.  The parent
-      #   of the child element is overridden with the element being tested; it
-      #   is therefore safe to set the child element's parent to this one,
-      #   since it won't result in circular reference.  This is useful if an
-      #   element on a page, that must contain a child element that can be located
-      #   with its selectors, is used in another way.  This can be set to an
-      #   array to specify multiple children elements.
+      # @option opts [Symbol, Array<Symbol>, Array<Array<Symbol>>] :child (nil)
+      #   If present, this restricts element selection to elements that
+      #   contain the child element.  The parent of the child element is
+      #   overridden with the element being tested; it is therefore safe to
+      #   set the child element's parent to this one, since it won't result
+      #   in circular reference.  This is useful if an element on a page,
+      #   that must contain a child element that can be located with its
+      #   selectors, is used in another way.  This can be set to an array to
+      #   specify multiple children elements.  Arguments can be specified in
+      #   an Array.  A :child can point to the Symbol of the child element.  To
+      #   specify multiple children, set :child to an Array of Symbols.  To
+      #   specify arguments to pass to each child, set :child to an Array of
+      #   Arrays each containing the symbol of the child element and then the
+      #   arguments passed to it.  Examples of each usage:
+      #
+      #   element :games_pane   , :div , :class => 'pane' , :child => :tbs_list
+      #   element :tbs_list     , :ul  , :class => 'list' , :child => [:tbs_header, :tbs_popular_list]
+      #   element :tbs_pop_list , :ul  , :class => 'list' , :child => [[:tbs_link, 'Battle Game 2'], [:tbs_link, 'Wars']]
+      #
+      #   element :tbs_header   , :h3  , :text  => 'Turn Based Strategy Games'
+      #   element :tbs_link     , :link , :proc => -> parent, name {...}
       #
       # @option opts [Symbol] :cache (nil) If non-nil, overrides the default
       #   cache setting and determines whether caching is enabled for this
@@ -224,6 +237,12 @@ module Gless
         click_destination = opts[:click_destination]
         validator = opts[:validator]
         parent = opts[:parent]
+        child = opts[:child]
+        if child.nil?
+          child = []
+        elsif child.kind_of? Array && !child.empty? && child[0].kind_of? Symbol
+          child.map! {|s| [s]}
+        end
         child = [opts[:child]].flatten.compact
         cache = opts[:cache]
 
