@@ -239,11 +239,15 @@ module Gless
         parent = opts[:parent]
         child = opts[:child]
         if child.nil?
+          # No child
           child = []
-        elsif child.kind_of? Array && !child.empty? && child[0].kind_of? Symbol
+        elsif child.kind_of? Symbol
+          # Single child
+          child = [[child]]
+        elsif (child.kind_of? Array) && (!child.empty?) && (child[0].kind_of? Symbol)
+          # Multiple children w/out arguments
           child.map! {|s| [s]}
         end
-        child = [opts[:child]].flatten.compact
         cache = opts[:cache]
 
         methname = basename.to_s.tr('-', '_').to_sym
