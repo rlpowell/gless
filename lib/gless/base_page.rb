@@ -127,6 +127,17 @@ module Gless
       # selector is forthcoming, the name is taken to be the element
       # id.
       #
+      # The element can also be a collection of elements with the appropriate
+      # element type (e.g. +lis+, plural of +li+); however, if it is restricted
+      # by non-watir selectors (e.g. with :child), the collection is returned
+      # as an +Array+, since watir-webdriver does not support arbitrarily
+      # filtering elements from an +ElementCollection+.  For
+      # reliability, the user can either ensure that the element is only used
+      # after being coerced into an array with +.to_a+ to ensure that the
+      # collection ends up as an Array in each case (unless the method used
+      # is supported by both element collections and arrays), or use a
+      # low-level +:proc+ to bypass gless's element finding procedure.
+      #
       # @param [Symbol] basename The name used in the Gless user's code
       #   to refer to this element.  This page object ends up with a
       #   method of this name.

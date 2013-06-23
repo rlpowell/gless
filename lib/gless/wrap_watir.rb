@@ -103,6 +103,14 @@ module Gless
       else
         @cached_elem = find_elem_directly
       end
+
+      if @temporary
+        e = @cached_elem
+        @cached_elem = nil
+        e
+      else
+        @cached_elem
+      end
     end
 
     # Find the element in question, regardless of whether the element has
@@ -171,11 +179,24 @@ module Gless
           # Generally, watir-webdriver code expects *something*
           # back, and uses .present? to see if it's really there, so
           # we get the singleton to satisfy that need.
-          return par.send(@orig_type, @orig_selector_args)
+
+          # Check for non-watir selectors, in which case we approximate by
+          # creating a watir-selector that never matches.
+          if elems.kind_of? Array
+            # Rather than proceeding silently without the non-watir selectors,
+            # we return an element that is never present, requiring a new
+            # element to be returned.
+            #
+            # Set temporary to avoid caching this element.
+            @temporary = true
+            return par.send(@orig_type, :id => /$^ ('#{@name}' not found)/)
+          else
+            return par.send(@orig_type, @orig_selector_args)
+          end
         end
 
         # We got something unexpected; just give it back
-        if ! elems.is_a?(Watir::ElementCollection)
+        if ! elems.is_a?(Watir::ElementCollection) && !elems.is_a?(Array)
           @session.log.debug "WrapWatir: find_elem: elements aren't a collection; returning them"
           return elems
         end
@@ -183,6 +204,7 @@ module Gless
         if multiples
           # We're OK returning the whole set
           @session.log.debug "WrapWatir: find_elem: multiples were requested; returning #{elems.inspect}"
+          @session.log.info "WrapWatir: find_elem: #{@name} returns an array due to non-watir element filtering; :proc can be used to override behaviour" if elems.kind_of? Array
           return elems
         elsif elems.length == 1
           # It's not a collection; just return it.
