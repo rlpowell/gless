@@ -8,7 +8,7 @@ module TestGithub
     element :search_button , :button     , :text  => 'Search'            , :validator => true , :parent => :search_form
 
     element :repository_list  , :ul   , :class => /\brepolist\b/
-    element :repository_link  , :link , :click_destination => :RepoPage , :parent => :repository_list , :proc => -> repos, name do
+    element :repository_link  , :link , :click_destination => :RepoPage , :parent => :repository_list , :proc => -> repos, page, name do
       repos.a(:text => name)
     end
     element :repository_elems , :lis  , :class => 'public source'       , :parent => :repository_list
