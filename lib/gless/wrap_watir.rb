@@ -142,7 +142,7 @@ module Gless
 
         if @orig_selector_args.has_key? :proc
           # If it's a Proc, it can handle its own visibility checking
-          return @orig_selector_args[:proc].call par, *@args
+          return @orig_selector_args[:proc].call par, @page, *@args
         else
           # We want all the relevant elements, so force that if it's
           # not what was asked for

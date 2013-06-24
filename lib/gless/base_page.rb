@@ -182,7 +182,7 @@ module Gless
       #   element :tbs_pop_list , :ul  , :class => 'list' , :child => [[:tbs_link, 'Battle Game 2'], [:tbs_link, 'Wars']]
       #
       #   element :tbs_header   , :h3  , :text  => 'Turn Based Strategy Games'
-      #   element :tbs_link     , :link , :proc => -> parent, name {...}
+      #   element :tbs_link     , :link , :proc => -> parent, page, name {...}
       #
       # @option opts [Symbol] :cache (nil) If non-nil, overrides the default
       #   cache setting and determines whether caching is enabled for this
@@ -194,16 +194,24 @@ module Gless
       #   low-level procedure to return a watir element, which overrides other
       #   selectors.  When the watir element is needed, this procedure is
       #   called with the parent watir element passed as the first argument (see
-      #   +:parent+) if it exists, and otherwise the browser.  Any arguments
-      #   given to the element at runtime are passed to the procedure after the
-      #   first, parent, argument.  For example, given the following
-      #   definition, where findElement is defined:
+      #   +:parent+) if it exists, and otherwise the browser, along with the
+      #   page as the second argument.  Any arguments given to the element
+      #   at runtime are passed to the procedure after the first, parent,
+      #   argument.  For example, given the definition
       #
-      #     element :book_list, :ul, :click_destination => :HomePage, :parent => :nonfiction, :proc => -> container, author {...}
+      #     element :book_list, :ul, :click_destination => :HomePage, :parent => :nonfiction, :proc => -> parent, page, author {...}
       #
-      #   then whenever +session.home "Robyn Dawes"+ is invoked, the procedure will be passed the
-      #   +:nonfiction+ element and the string "Robyn Dawes", and should return
-      #   a Watir element.
+      #   then whenever +session.book_list "Robyn Dawes"+ is invoked, the procedure will be passed the
+      #   +:nonfiction+ element, the page for which +:book_list+ was defined,
+      #   and the string "Robyn Dawes", and should return a Watir element.  In
+      #   the block itself, +parent+ could be used as the root element (the
+      #   browser with no root element), which can be different if the user
+      #   decides to restrict the +:book_list+ element under a new parent (e.g.
+      #   in invoking +@session.bilingual_pane.book_list, in which case parent
+      #   would be set to the :bilingual_pane element).  +page+ refers to the
+      #   page object in which +:book_list+ is defined, which can be used to
+      #   refer to other elements and methods on the same page.  Any arguments
+      #   passed to the element are given to the block.
       #
       #   Different elements are cached for different
       #   arguments.  Caching can be disabled for an individual
