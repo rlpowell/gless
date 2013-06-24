@@ -24,7 +24,7 @@ module Gless
     # @return [Symbol, Gless::WrapWatir, Watir::Element, Watir::ElementCollection]
     #   The symbol for the parent of this element,
     #   restricting the scope of its selectorselement.
-    attr_accessor :parent
+    attr_accessor :gless_parent
 
     # Sets up the wrapping.
     #
@@ -127,17 +127,17 @@ module Gless
         # Do we want to return more than one element?
         multiples = false
 
-        case parent
+        case gless_parent
         when NilClass
           par = @browser
         when Symbol
-          par = @page.send(parent).find_elem
+          par = @page.send(gless_parent).find_elem
         when WrapWatir
-          par = parent.find_elem
+          par = gless_parent.find_elem
         when Watir::Element
-          par = parent
+          par = gless_parent
         when Watir::ElementCollection
-          par = parent
+          par = gless_parent
         end
 
         if @orig_selector_args.has_key? :proc
@@ -258,9 +258,9 @@ module Gless
 
     # Retrieve a copy of the gless element with a different parent.  With a
     # different parent, the copy may refer to a different element.
-    def with_parent(parent)
+    def with_parent(gless_parent)
       copy = clone
-      copy.parent = parent
+      copy.gless_parent = gless_parent
       copy
     end
 
