@@ -58,7 +58,7 @@ module Gless
     #
     #   is the selector arguments.
     # @param [Gless::BasePage, Array<Gless::BasePage>] click_destination Optional. A list of pages that are OK places to end up after we click on this element
-    # @param [Symbol] parent The symbol for the parent element under which the wrapped element is restricted.
+    # @param [Symbol] gless_parent The symbol for the parent element under which the wrapped element is restricted.
     # @param [Array<Array<Object>>] child The list of of the children over which
     #   element selection is restricted.  Each Array contains the symbol of the
     #   element and the arguments passed to it.
@@ -67,7 +67,7 @@ module Gless
     #   each time it is invoked; otherwise, the watir element is recorded
     #   and kept until the session changes the page.  If nil, the default value
     #   is retrieved from the config.
-    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, parent, child, cache, *args)
+    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, gless_parent, child, cache, *args)
       @name = name
       @browser = browser
       @session = session
@@ -77,7 +77,7 @@ module Gless
       @num_retries = 3
       @wait_time = 30
       @click_destination = click_destination
-      @parent = parent
+      @gless_parent = gless_parent
       @child = child
       @cache = cache.nil? ? @session.get_config(:global, :cache) : cache
       @args = [*args]
