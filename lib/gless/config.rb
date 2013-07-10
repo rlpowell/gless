@@ -81,7 +81,25 @@ module Gless
       @config.merge!(hash)
     end
 
+    # Set an element in the configuration to the given value, passed after all
+    # of the indices.
+    #
+    # @example
+    #
+    #  @config.set :global, :debug, true
+    def set(*indices, value)
+      set_root @config, value, *indices
+    end
+
     private
+
+    def set_root root, value, *indices
+      if indices.length > 1
+        set_root root[indices[0]], value, *indices[1..-1]
+      else
+        root[indices[0]] = value
+      end
+    end
 
     # Recursively does all the heavy lifting for get
     def get_sub_tree items, elem, *args
