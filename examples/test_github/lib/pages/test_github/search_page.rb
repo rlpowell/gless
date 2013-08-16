@@ -4,7 +4,7 @@ module TestGithub
   class SearchPage < TestGithub::BasePage
 
     element :search_form   , :form       , :id    => 'search_form'       , :validator => true , :child  => :search_input
-    element :search_input  , :text_field , :class => 'search-page-input' , :validator => true , :parent => :search_form
+    element :search_input  , :text_field , :name  => 'q'                 , :validator => true , :parent => :search_form
     element :search_button , :button     , :text  => 'Search'            , :validator => true , :parent => :search_form
 
     element :repository_list  , :ul   , :class => /\brepolist\b/
