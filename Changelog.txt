@@ -3,3 +3,7 @@
   behaviour.
 - 1.2.0: 10 Jun 2013: Changes by bairyn.  Added caching, finding
 based on parent element, and block validators.
+- 1.3.0: 8 Aug 2013: Detect and work around errors caused by incorrect caching,
+and add support for element arguments, evaluating elements under new parents,
+finding based on children, and the :unique option to ensure only one element
+matches a specification.
