@@ -67,7 +67,8 @@ module Gless
     #   each time it is invoked; otherwise, the watir element is recorded
     #   and kept until the session changes the page.  If nil, the default value
     #   is retrieved from the config.
-    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, gless_parent, child, cache, *args)
+    # @param [Boolean] unique Whether to require element matches to be unique.
+    def initialize(name, browser, session, page, orig_type, orig_selector_args, click_destination, gless_parent, child, cache, unique, *args)
       @name = name
       @browser = browser
       @session = session
@@ -80,6 +81,7 @@ module Gless
       @gless_parent = gless_parent
       @child = child
       @cache = cache.nil? ? @session.get_config(:global, :cache) : cache
+      @unique = unique
       @args = [*args]
     end
 
@@ -175,7 +177,10 @@ module Gless
 
         @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} initial version: #{elems.inspect}"
 
-        if elems.nil? or elems.length == 0
+        if @unique && elems && elems.length > 1
+          @session.log.debug "WrapWatir: find_elem: '#@{name}' is not unique"
+          return par.send(@orig_type, :id => /$^ ('#{@name}' is not unique)/)
+        elsif elems.nil? || elems.length == 0
           @session.log.debug "WrapWatir: find_elem: can't find any element identified by #{trimmed_selectors.inspect}"
           # Generally, watir-webdriver code expects *something*
           # back, and uses .present? to see if it's really there, so

@@ -121,7 +121,7 @@ module Gless
       # The first two arguments (name and type) are required.  The
       # rest is a hash.  Six options (see below) have special meaning:
       # +:validator+, +:click_destination+, +:parent+, +:child+
-      # +:proc+, and +:cache+ (see below) have special meaning.
+      # +:proc+, +:cache+, and +:unique+ (see below) have special meaning.
       #
       # Anything else is taken to be a Watir selector.  If no
       # selector is forthcoming, the name is taken to be the element
@@ -189,6 +189,11 @@ module Gless
       #   element.  If false, a new look-up will be performed each time the
       #   element is accessed, and, if true, a look-up will only be performed
       #   once until the session changes the page.
+      #
+      # @option opts [Symbol] :unique (false) If true, fail if multiple
+      #   elements match the element's specification when the element is
+      #   accessed.  Note that this option has no effect on elements with
+      #   +:proc+s.
       # 
       # @option opts [Symbol] :proc (nil) If present, specifies a manual,
       #   low-level procedure to return a watir element, which overrides other
@@ -225,7 +230,7 @@ module Gless
 
         # Promote various other things into selectors; do this before
         # we add in the default below
-        non_selector_opts = [ :validator, :click_destination, :parent, :cache, :child ]
+        non_selector_opts = [ :validator, :click_destination, :parent, :cache, :unique, :child ]
         if ! opts[:selector]
           opts[:selector] = {} if ! opts.keys.empty?
           opts.keys.each do |key|
@@ -257,6 +262,7 @@ module Gless
           child.map! {|s| [s]}
         end
         cache = opts[:cache]
+        unique = opts[:unique]
 
         methname = basename.to_s.tr('-', '_').to_sym
 
@@ -273,7 +279,7 @@ module Gless
         end
 
         define_method methname do |*args|
-          cached_elements[[methname, *args]] ||= Gless::WrapWatir.new(methname, @browser, @session, self, type, selector, click_destination, parent, child, cache, *args)
+          cached_elements[[methname, *args]] ||= Gless::WrapWatir.new(methname, @browser, @session, self, type, selector, click_destination, parent, child, cache, unique, *args)
         end
       end
 
