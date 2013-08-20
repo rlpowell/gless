@@ -178,7 +178,7 @@ module Gless
         @session.log.debug "WrapWatir: find_elem: elements identified by #{trimmed_selectors.inspect} initial version: #{elems.inspect}"
 
         if @unique && elems && elems.length > 1
-          @session.log.debug "WrapWatir: find_elem: '#@{name}' is not unique"
+          @session.log.debug "WrapWatir: find_elem: '#{@name}' is not unique"
           return par.send(@orig_type, :id => /$^ ('#{@name}' is not unique)/)
         elsif elems.nil? || elems.length == 0
           @session.log.debug "WrapWatir: find_elem: can't find any element identified by #{trimmed_selectors.inspect}"
