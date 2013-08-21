@@ -240,3 +240,9 @@ markup.  Various things you can do:
 * `yard server`
  + pretty web interface to the documentation
 
+## Note To Self ##
+
+To release a new version:
+
+* `rake build`
+* `gem push [file]`
