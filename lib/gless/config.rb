@@ -27,10 +27,10 @@ module Gless
     #
     # @return [Gless::EnvConfig]
     def initialize
-      env = (ENV['ENVIRONMENT'] || 'development').to_sym
+      @env = (ENV['ENVIRONMENT'] || 'development').to_sym
 
-      env_file = "#{@@env_dir}/config/#{env}.yml"
-      raise "You need to create a configuration file named '#{env}.yml' (generated from the ENVIRONMENT environment variable) under #{@@env_dir}/lib/config" unless File.exists? env_file
+      env_file = "#{@@env_dir}/config/#{@env}.yml"
+      raise "You need to create a configuration file named '#{@env}.yml' (generated from the ENVIRONMENT environment variable) under #{@@env_dir}/lib/config" unless File.exists? env_file
 
       @config = YAML::load_file env_file
     end
@@ -54,28 +54,62 @@ module Gless
     # @return [Object] what's left after following each key; could be
     #   basically anything.
     def get( *args )
+      r = get_default nil, *args
+      raise "Could not locate '#{args.join '.'}' in YAML config; please ensure that '#{@env}.yml' is up to date." if r.nil?
+      r
+    end
+
+    # Optionally get an element from the configuration, otherwise returning the
+    # default value.
+    #
+    # @example
+    #
+    #  @config.get_default false, :global, :cache
+    #
+    # @return [Object] what's left after following each key, or else the
+    #   default value.
+    def get_default( default, *args )
       if args.empty?
         return @config
       end
 
-      return get_sub_tree( @config, *args )
+      r = get_sub_tree( @config, *args )
+      r.nil? ? default : r
     end
 
     def merge(hash)
       @config.merge!(hash)
     end
 
+    # Set an element in the configuration to the given value, passed after all
+    # of the indices.
+    #
+    # @example
+    #
+    #  @config.set :global, :debug, true
+    def set(*indices, value)
+      set_root @config, value, *indices
+    end
+
     private
+
+    def set_root root, value, *indices
+      if indices.length > 1
+        set_root root[indices[0]], value, *indices[1..-1]
+      else
+        root[indices[0]] = value
+      end
+    end
 
     # Recursively does all the heavy lifting for get
     def get_sub_tree items, elem, *args
       # Can't use debug logging here, as it maybe isn't turned on yet
       # puts "In Gless::EnvConfig, get_sub_tree: items: #{items}, elem: #{elem}, args: #{args}"
 
-      raise "Could not locate '#{elem}' in YAML config" if items.nil?
+      return nil if items.nil?
 
       new_items = items[elem.to_sym]
-      raise "Could not locate '#{elem}' in YAML config" if new_items.nil?
+      return nil if new_items.nil?
 
       if args.empty?
         return new_items

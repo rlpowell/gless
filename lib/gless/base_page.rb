@@ -119,12 +119,24 @@ module Gless
       # That's about as complicated as it gets.
       #
       # The first two arguments (name and type) are required.  The
-      # rest is a hash.  +:validator+, +:click_destination+, +:parent+,
-      # +:proc+, and +:cache+ (see below) have special meaning.
+      # rest is a hash.  Six options (see below) have special meaning:
+      # +:validator+, +:click_destination+, +:parent+, +:child+
+      # +:proc+, +:cache+, and +:unique+ (see below) have special meaning.
       #
       # Anything else is taken to be a Watir selector.  If no
       # selector is forthcoming, the name is taken to be the element
       # id.
+      #
+      # The element can also be a collection of elements with the appropriate
+      # element type (e.g. +lis+, plural of +li+); however, if it is restricted
+      # by non-watir selectors (e.g. with :child), the collection is returned
+      # as an +Array+, since watir-webdriver does not support arbitrarily
+      # filtering elements from an +ElementCollection+.  For
+      # reliability, the user can either ensure that the element is only used
+      # after being coerced into an array with +.to_a+ to ensure that the
+      # collection ends up as an Array in each case (unless the method used
+      # is supported by both element collections and arrays), or use a
+      # low-level +:proc+ to bypass gless's element finding procedure.
       #
       # @param [Symbol] basename The name used in the Gless user's code
       #   to refer to this element.  This page object ends up with a
@@ -149,18 +161,66 @@ module Gless
       # 
       # @option opts [Symbol] :parent (nil) A symbol of a parent element
       #   to which matching is restricted.
-      # 
+      #
+      # @option opts [Symbol, Array<Symbol>, Array<Array<Symbol>>] :child (nil)
+      #   If present, this restricts element selection to elements that
+      #   contain the child element.  The parent of the child element is
+      #   overridden with the element being tested; it is therefore safe to
+      #   set the child element's parent to this one, since it won't result
+      #   in circular reference.  This is useful if an element on a page,
+      #   that must contain a child element that can be located with its
+      #   selectors, is used in another way.  This can be set to an array to
+      #   specify multiple children elements.  Arguments can be specified in
+      #   an Array.  A :child can point to the Symbol of the child element.  To
+      #   specify multiple children, set :child to an Array of Symbols.  To
+      #   specify arguments to pass to each child, set :child to an Array of
+      #   Arrays each containing the symbol of the child element and then the
+      #   arguments passed to it.  Examples of each usage:
+      #
+      #   element :games_pane   , :div , :class => 'pane' , :child => :tbs_list
+      #   element :tbs_list     , :ul  , :class => 'list' , :child => [:tbs_header, :tbs_popular_list]
+      #   element :tbs_pop_list , :ul  , :class => 'list' , :child => [[:tbs_link, 'Battle Game 2'], [:tbs_link, 'Wars']]
+      #
+      #   element :tbs_header   , :h3  , :text  => 'Turn Based Strategy Games'
+      #   element :tbs_link     , :link , :proc => -> parent, page, name {...}
+      #
       # @option opts [Symbol] :cache (nil) If non-nil, overrides the default
       #   cache setting and determines whether caching is enabled for this
       #   element.  If false, a new look-up will be performed each time the
       #   element is accessed, and, if true, a look-up will only be performed
       #   once until the session changes the page.
+      #
+      # @option opts [Symbol] :unique (false) If true, fail if multiple
+      #   elements match the element's specification when the element is
+      #   accessed.  Note that this option has no effect on elements with
+      #   +:proc+s.
       # 
       # @option opts [Symbol] :proc (nil) If present, specifies a manual,
       #   low-level procedure to return a watir element, which overrides other
       #   selectors.  When the watir element is needed, this procedure is
-      #   called with the parent watir element passed as the argument (see
-      #   +:parent+) if it exists, and otherwise the browser.
+      #   called with the parent watir element passed as the first argument (see
+      #   +:parent+) if it exists, and otherwise the browser, along with the
+      #   page as the second argument.  Any arguments given to the element
+      #   at runtime are passed to the procedure after the first, parent,
+      #   argument.  For example, given the definition
+      #
+      #     element :book_list, :ul, :click_destination => :HomePage, :parent => :nonfiction, :proc => -> parent, page, author {...}
+      #
+      #   then whenever +session.book_list "Robyn Dawes"+ is invoked, the procedure will be passed the
+      #   +:nonfiction+ element, the page for which +:book_list+ was defined,
+      #   and the string "Robyn Dawes", and should return a Watir element.  In
+      #   the block itself, +parent+ could be used as the root element (the
+      #   browser with no root element), which can be different if the user
+      #   decides to restrict the +:book_list+ element under a new parent (e.g.
+      #   in invoking +@session.bilingual_pane.book_list, in which case parent
+      #   would be set to the :bilingual_pane element).  +page+ refers to the
+      #   page object in which +:book_list+ is defined, which can be used to
+      #   refer to other elements and methods on the same page.  Any arguments
+      #   passed to the element are given to the block.
+      #
+      #   Different elements are cached for different
+      #   arguments.  Caching can be disabled for an individual
+      #   element by passing :cache => false.
       # 
       # @option opts [Object] ANY All other opts keys are used as
       #   Watir selectors to find the element on the page.
@@ -170,7 +230,7 @@ module Gless
 
         # Promote various other things into selectors; do this before
         # we add in the default below
-        non_selector_opts = [ :validator, :click_destination, :parent, :cache ]
+        non_selector_opts = [ :validator, :click_destination, :parent, :cache, :unique, :child ]
         if ! opts[:selector]
           opts[:selector] = {} if ! opts.keys.empty?
           opts.keys.each do |key|
@@ -190,7 +250,19 @@ module Gless
         click_destination = opts[:click_destination]
         validator = opts[:validator]
         parent = opts[:parent]
+        child = opts[:child]
+        if child.nil?
+          # No child
+          child = []
+        elsif child.kind_of? Symbol
+          # Single child
+          child = [[child]]
+        elsif (child.kind_of? Array) && (!child.empty?) && (child[0].kind_of? Symbol)
+          # Multiple children w/out arguments
+          child.map! {|s| [s]}
+        end
         cache = opts[:cache]
+        unique = opts[:unique]
 
         methname = basename.to_s.tr('-', '_').to_sym
 
@@ -206,8 +278,8 @@ module Gless
           # $master_logger.debug "In GenericBasePage, for #{self.name}, element: #{basename} has a special destination when clicked, #{click_destination}"
         end
 
-        define_method methname do
-          cached_elements[methname] ||= Gless::WrapWatir.new(@browser, @session, self, type, selector, click_destination, parent, cache)
+        define_method methname do |*args|
+          cached_elements[[methname, *args]] ||= Gless::WrapWatir.new(methname, @browser, @session, self, type, selector, click_destination, parent, child, cache, unique, *args)
         end
       end
 
@@ -397,10 +469,6 @@ module Gless
         end
       end
     end
-
-    #******************************
-    # Object Level
-    #******************************
 
     # @return [Hash] A hash of cached +WrapWatir+ elements indexed by the
     #   symbol name.  This hash is cleared whenever the page changes.

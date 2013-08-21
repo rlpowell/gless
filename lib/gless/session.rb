@@ -83,6 +83,12 @@ module Gless
       @config.get(*args)
     end
 
+    # Just passes through to the Gless::EnvConfig component's +get_default+
+    # method.
+    def get_config_default(*args)
+      @config.get_default(*args)
+    end
+
     # Just a shortcut to get to the Gless::Logger object.
     def log
       @logger
@@ -174,12 +180,18 @@ module Gless
     #
     # @param [Class] pklas The class for the page object that has a
     #   set_entry_url that we are using.
-    def enter(pklas)
+    # @param [Boolean] always (true) Whether to enter the given page even
+    def enter(pklas, always = true)
       log.info "Session: Entering the site directly using the entry point for the #{pklas.name} page class"
-      @current_page = pklas
-      @pages[pklas].enter
-      # Needs to run through our custom acceptable_pages= method
-      self.acceptable_pages = pklas
+
+      if always || pklas != @current_page
+        @current_page = pklas
+        @pages[pklas].enter
+        # Needs to run through our custom acceptable_pages= method
+        self.acceptable_pages = pklas
+      else
+        log.debug "Session: Already on page"
+      end
     end
 
     # Wait for long-term AJAX-style processing, i.e. watch the page
