@@ -452,6 +452,9 @@ module Gless
         log.info "Session: change_pages: We have successfully moved to page #{new_page.class.name}"
 
         @previous_url = url
+      else
+        # Timed out.
+        error_message = "Session: change_pages: attempt to change pages to #{new_page.class.name} timed out after #{@timeout} tries.  Are the validators for #{@acceptable_pages} correct?"
       end
 
       return good_page, error_message
