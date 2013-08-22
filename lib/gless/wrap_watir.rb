@@ -411,6 +411,8 @@ module Gless
       elem.click
     end
 
+    ClickTriesBeforeWarn = 3
+
     # A wrapper around Watir's click; handles the changing of
     # acceptable pages (i.e. click_destination processing, see
     # {Gless::BasePage} and {Gless::Session} for more details).
@@ -426,10 +428,16 @@ module Gless
       if @click_destination
         @session.log.debug "WrapWatir: click: A #{elem.class.name} element identified by: #{trimmed_selectors.inspect} has a special destination when clicked, #{@click_destination}"
         change_pages_out, change_pages_message = @session.change_pages( @click_destination ) do
+          tries = 0
           wrapper_logging('click', nil)
           @session.log.debug "WrapWatir: click: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
           if elem.exists?
             wrap_watir_call :click
+          else
+            tries += 1
+
+            # Warn once.
+            @session.log.warn "WrapWatir#click: element #{@name} doesn't exist; waiting until present." if tries == ClickTriesBeforeWarn
           end
           if block_given?
             yield
