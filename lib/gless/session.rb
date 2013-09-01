@@ -393,7 +393,12 @@ module Gless
       # are for "timeout" seconds.
       @timeout.times do
         self.log.debug "Session: change_pages: yielding to passed block."
-        yield
+        begin
+          yield
+        rescue Watir::Exception::UnknownObjectException => e
+          error_message = "Caught UnknownObjectExepction; are the validators for #{@acceptable_pages} correct?  #{e.inspect}"
+          log.warn "Session#change_pages: #{error_message}"
+        end
         self.log.debug "Session: change_pages: done yielding to passed block."
 
         if @acceptable_pages.member?( @current_page )
