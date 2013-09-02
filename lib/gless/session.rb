@@ -459,7 +459,7 @@ module Gless
         @previous_url = url
       else
         # Timed out.
-        error_message = "Session: change_pages: attempt to change pages to #{click_destination} timed out after #{@timeout} tries.  Are the validators for #{@acceptable_pages} correct?"
+        error_message = "Session: change_pages: attempt to change pages to #{click_destination} timed out after #{@timeout} tries.  If the clicked element exists, are the validators for #{@acceptable_pages} correct?"
       end
 
       return good_page, error_message
