@@ -4,8 +4,13 @@
     :url: https://github.com
   :browser:
     :type: remote		# Local or remote
-    :browser: chrome	# Which browser to use
-    :port: 4444		# If remote, port to connect to the selenimu server, otherwise ignored
+    :browser: chrome	# Which browser to use; "ie", "chrome", and "firefox" are definitely valid, there may be others
+    :port: 4444		# If remote, port to connect to the selenium server, otherwise ignored
+    # These options would normally only be used with something like
+    # SauceLabs
+    # :url: "http://rlpowell:[snip]@ondemand.saucelabs.com:80/wd/hub" # The URL Sauce gives you
+    # :version: 27  # The browser version to use
+    # :platform: 'Windows 7' # The OS to use
   :verbose: false       # Whether to engage in more verbose/info level logging
   :debug: false	        # Whether to engage in debug logging
   :screenshots: false   # Whether, if debugging is on, to create screenshots as part of the replay log

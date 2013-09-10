@@ -22,12 +22,34 @@ module Gless
       type=@config.get :global, :browser, :type
       browser=@config.get :global, :browser, :browser
       port=@config.get :global, :browser, :port
+      url=@config.get_default false, :global, :browser, :url
+      browser_version=@config.get_default '', :global, :browser, :version
+      platform=@config.get_default :any, :global, :browser, :platform
+
+      if browser =~ %r{^\s*ie\s*$} or browser =~ %r{^\s*internet\s*_?\s*explorer\s*$}
+        browser = 'internet explorer'
+      end
+
       @logger.debug "Launching some browser; #{type}, #{port}, #{browser}"
 
       if type == 'remote'
         @logger.info "Launching remote browser #{browser} on port #{port}"
-        capabilities = Selenium::WebDriver::Remote::Capabilities.new( :browser_name => browser, :javascript_enabled=>true, :css_selectors_enabled=>true, :takes_screenshot=>true, :native_events=>true )
-        @browser = Watir::Browser.new(:remote, :url => "http://127.0.0.1:#{port}/wd/hub", :desired_capabilities => capabilities)
+        capabilities = Selenium::WebDriver::Remote::Capabilities.new(
+          :browser_name => browser,
+          :javascript_enabled=>true,
+          :css_selectors_enabled=>true,
+          :takes_screenshot=>true,
+          :version => browser_version,
+          :platform => platform
+        )
+
+        if url
+          @logger.debug "Launching with custom url #{url}"
+        else
+          url = "http://127.0.0.1:#{port}/wd/hub"
+        end
+
+        @browser = Watir::Browser.new(:remote, :url => url, :desired_capabilities => capabilities)
       else
         @logger.info "Launching local browser #{browser}"
         @browser = Watir::Browser.new browser
