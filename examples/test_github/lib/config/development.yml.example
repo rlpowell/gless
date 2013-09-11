@@ -11,6 +11,8 @@
     # :url: "http://rlpowell:[snip]@ondemand.saucelabs.com:80/wd/hub" # The URL Sauce gives you
     # :version: 27  # The browser version to use
     # :platform: 'Windows 7' # The OS to use
+    # :idle_timeout: 600 # Sauce specific
+    # :max_duration: 5400 # Sauce specific
   :verbose: false       # Whether to engage in more verbose/info level logging
   :debug: false	        # Whether to engage in debug logging
   :screenshots: false   # Whether, if debugging is on, to create screenshots as part of the replay log
