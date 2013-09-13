@@ -5,11 +5,12 @@ require "gless"
 Gem::Specification.new do |s|
   s.name        = "gless"
   s.version     = Gless::VERSION
-  s.authors     = ["Robin Lee Powell"]
-  s.email       = ["rlpowell@digitalkingdom.org"]
+  s.authors     = ["Robin Lee Powell", "Byron Johnson"]
+  s.email       = ["rlpowell@digitalkingdom.org", "byron@byronjohnson.net"]
   s.homepage    = "http://github.com/rlpowell/gless"
   s.summary     = %q{A wrapper for Watir-WebDriver based on modelling web page and web site structure.}
   s.description = %q{This gem attempts to provide a more robust model for web application testing, on top of Watir-WebDriver which already has significant improvements over just Selenium or WebDriver, based on describing pages and then interacting with the descriptions.}
+  s.license     = 'MIT'
 
   s.add_dependency 'rspec'
   s.add_dependency 'watir-webdriver'
