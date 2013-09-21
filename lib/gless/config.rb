@@ -81,6 +81,11 @@ module Gless
       @config.merge!(hash)
     end
 
+    def deep_merge(b)
+      iter = -> a, step {a.merge(step) {|key, oldval, newval| [oldval, newval].all? {|v| v.kind_of? Hash} ? iter.(oldval, newval) : newval}};
+      @config = iter.(@config, b)
+    end
+
     # Set an element in the configuration to the given value, passed after all
     # of the indices.
     #

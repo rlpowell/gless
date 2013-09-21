@@ -393,7 +393,12 @@ module Gless
       # are for "timeout" seconds.
       @timeout.times do
         self.log.debug "Session: change_pages: yielding to passed block."
-        yield
+        begin
+          yield if block_given?
+        rescue Watir::Exception::UnknownObjectException => e
+          error_message = "Caught UnknownObjectExepction; are the validators for #{@acceptable_pages} correct?  #{e.inspect}"
+          log.warn "Session#change_pages: #{error_message}"
+        end
         self.log.debug "Session: change_pages: done yielding to passed block."
 
         if @acceptable_pages.member?( @current_page )
@@ -452,6 +457,9 @@ module Gless
         log.info "Session: change_pages: We have successfully moved to page #{new_page.class.name}"
 
         @previous_url = url
+      else
+        # Timed out.
+        error_message = "Session: change_pages: attempt to change pages to #{click_destination} timed out after #{@timeout} tries.  If the clicked element exists, are the validators for #{@acceptable_pages} correct?"
       end
 
       return good_page, error_message

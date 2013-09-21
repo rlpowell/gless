@@ -399,7 +399,12 @@ module Gless
     # Unconditionally clicks once, without any error handling; if
     # you want to try to execute a page transition no matter what,
     # just use +click+
-    def click_once
+    #
+    # @param [Boolean] change_pages (false) Call the session object's
+    #   +change_pages+ method if the element targets a page with
+    #   +click_destination+; otherwise, ignore page transitions.  Defaults to
+    #   +false+ simply for backwards-compatibility.
+    def click_once change_pages = false, &block
       elem = find_elem
 
       if @click_destination
@@ -409,7 +414,14 @@ module Gless
       wrapper_logging('click', nil)
       @session.log.debug "WrapWatir: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
       elem.click
+
+      if @click_destination && change_pages
+        @session.log.debug "WrapWatir: #{@name}.click_once: changing pages"
+        @session.change_pages @click_destination, &block
+      end
     end
+
+    ClickTriesBeforeWarn = 3
 
     # A wrapper around Watir's click; handles the changing of
     # acceptable pages (i.e. click_destination processing, see
@@ -426,10 +438,16 @@ module Gless
       if @click_destination
         @session.log.debug "WrapWatir: click: A #{elem.class.name} element identified by: #{trimmed_selectors.inspect} has a special destination when clicked, #{@click_destination}"
         change_pages_out, change_pages_message = @session.change_pages( @click_destination ) do
+          tries = 0
           wrapper_logging('click', nil)
           @session.log.debug "WrapWatir: click: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
           if elem.exists?
             wrap_watir_call :click
+          else
+            tries += 1
+
+            # Warn once.
+            @session.log.warn "WrapWatir#click: element #{@name} doesn't exist; waiting until present." if tries == ClickTriesBeforeWarn
           end
           if block_given?
             yield
