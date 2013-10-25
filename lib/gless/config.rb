@@ -26,13 +26,17 @@ module Gless
     # environment variable of that name.
     #
     # @return [Gless::EnvConfig]
-    def initialize
-      @env = (ENV['ENVIRONMENT'] || 'development').to_sym
+    def initialize( hash = nil )
+      if hash
+        @config = hash
+      else
+        @env = (ENV['ENVIRONMENT'] || 'development').to_sym
 
-      env_file = "#{@@env_dir}/config/#{@env}.yml"
-      raise "You need to create a configuration file named '#{@env}.yml' (generated from the ENVIRONMENT environment variable) under #{@@env_dir}/lib/config" unless File.exists? env_file
+        env_file = "#{@@env_dir}/config/#{@env}.yml"
+        raise "You need to create a configuration file named '#{@env}.yml' (generated from the ENVIRONMENT environment variable) under #{@@env_dir}/lib/config" unless File.exists? env_file
 
-      @config = YAML::load_file env_file
+        @config = YAML::load_file env_file
+      end
     end
 
     # Add a file to those in use for configuration data.
