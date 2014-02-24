@@ -352,7 +352,7 @@ module Gless
       if newpage.kind_of? Class
         return [ newpage ]
       elsif newpage.kind_of? Symbol
-        return [ @pages.keys.find { |x| x.name =~ /#{newpage.to_s}$/ } ]
+        return [ @pages.keys.find { |x| x.name =~ /(^|::)#{newpage.to_s}$/ } ]
       elsif newpage.kind_of? Array
         return newpage.map { |p| check_acceptable_pages p }
       else
