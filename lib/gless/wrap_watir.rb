@@ -380,9 +380,7 @@ module Gless
       if trimmed_selectors.inspect =~ /password/i
         @session.log.debug "WrapWatir: Doing something with passwords, redacted."
       else
-        if @session.get_config :global, :replay
-          @session.log.add_to_replay_log( @browser, @session )
-        end
+        @session.log.add_to_replay_log( @browser, @session )
 
         @session.log.debug "WrapWatir: Calling #{m} with arguments #{args.inspect} on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
 
