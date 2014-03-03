@@ -192,12 +192,12 @@ produce some pretty verbose logging of what it's doing.
 
 A less crazy version is ":verbose: true".
 
-It will also create a replay log directory which is intended to be
-viewed in a browser.  The directory location defaults to
-~/public_html/watir_replay/test/ ; the initialization of
-Gless::Logger determines that location.  Most actions that Gless
-performs will cause the replay log to be updated a copy of the HTML
-source as Gless/Watir/Selenium/WebDriver sees it.
+If replay is true in the config file, it will also create a replay
+log directory which is intended to be viewed in a browser.  The
+directory location defaults to ~/public_html/watir_replay/test/ ;
+the initialization of Gless::Logger determines that location.  Most
+actions that Gless performs will cause the replay log to be updated
+a copy of the HTML source as Gless/Watir/Selenium/WebDriver sees it.
 
 If you have ":screenshots: true" (along with debugging), screenshots
 will also be taken showing the visual state of the browser at the

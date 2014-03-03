@@ -6,7 +6,7 @@
 # project.
 module Gless
   # The current version number.
-  VERSION = '1.5.2'
+  VERSION = '1.6'
 
   # Sets up the config, logger and browser instances, the ordering
   # of which is slightly tricky.  If a block is given, the config, after being
@@ -26,11 +26,15 @@ module Gless
   #
   # @return [Gless::Logger, Gless::EnvConfig, Gless::Browser] logger, config, browser (in that order)
   def self.setup( tag, hash = nil )
-    logger = Gless::Logger.new( tag )
-
     # Create the config reading/storage object
     config = Gless::EnvConfig.new( hash )
     config = yield config if block_given?
+
+    logger = Gless::Logger.new(
+      tag,
+      config.get_default( false, :global, :replay ),
+      config.get_default( '%{home}/public_html/watir_replay/%{tag}', :global, :replay_path )
+    )
 
     # Get the whole backtrace, please.
     if config.get :global, :debug
@@ -46,14 +50,18 @@ module Gless
     # Turn on verbose (info) level logging.
     if config.get :global, :verbose
       logger.normal_log.level = ::Logger::INFO
-      logger.replay_log.level = ::Logger::INFO
+      if logger.replay_log
+        logger.replay_log.level = ::Logger::INFO
+      end
       logger.debug "Verbose/info level logging enabled."
     end
 
     # Turn on debug level logging.
     if config.get :global, :debug
       logger.normal_log.level = ::Logger::DEBUG
-      logger.replay_log.level = ::Logger::DEBUG
+      if logger.replay_log
+        logger.replay_log.level = ::Logger::DEBUG
+      end
       logger.debug "Debug level logging enabled."
     end
 

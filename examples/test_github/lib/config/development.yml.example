@@ -15,6 +15,9 @@
     # :max_duration: 5400 # Sauce specific
   :verbose: false       # Whether to engage in more verbose/info level logging
   :debug: false	        # Whether to engage in debug logging
+  :replay: false        # Whether to create a replay log, which shows html for each step of operations
+  :replay_path: "%{home}/public_html/watir_replay/%{tag}"
+                        # The path to put the replay logs; should probably be web accessible to be of much use; %{home} is replaced as you would expect
   :screenshots: false   # Whether, if debugging is on, to create screenshots as part of the replay log
   :thumbnails: false	# Whether, if screenshots are on, to create small-ish "thumbnail" pictures on the replay page; requires the imagemagick system package and the mini_magick gem
   :cache: false  # Whether, by default, to cache elements, significantly improving performance.   For individual elements, caching can be disabled by adding ":cache => false" to the element specifier.

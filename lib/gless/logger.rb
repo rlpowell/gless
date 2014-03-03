@@ -40,30 +40,34 @@ module Gless
 
       @ssnum = 0  # For snapshot pictures
 
-      @replay_path=sprintf(replay_path, { :home => ENV['HOME'], :tag => tag, :replay => replay })
-      FileUtils.rm_rf(@replay_path)
-      FileUtils.mkdir(@replay_path)
-
-      replay_log_file = File.open("#{@replay_path}/index.html", "w")
-      @replay_log = ::Logger.new replay_log_file
-
-      #@replay_log.formatter = proc do |severity, datetime, progname, msg|
-      #  # I, [2012-08-14T15:30:10.736784 #14647]  INFO -- : <p>Launching remote browser</p>
-      #  "<p>#{severity[0]}, [#{datetime} #{progname}]: #{severity} -- : #{msg}</p>\n"
-      #end
-
       original_formatter = ::Logger::Formatter.new
 
-      # Add in the tag and html-ify
-      @replay_log.formatter = proc { |severity, datetime, progname, msg|
-        # Can't flush after from here, so flush prior stuff
-        replay_log_file.flush
-        npn = "#{progname} #{tag} ".sub(/^\s*/,'').sub(/\s*$/,'')
-        stuff=original_formatter.call(severity, datetime, "#{progname} #{tag} ", msg)
-        #"<p>#{ERB::Util.html_escape(stuff.chomp)}</p>\n"
-        "<p>#{stuff.chomp}</p>\n"
-      }
-      @replay_log.level = ::Logger::WARN
+      if replay
+        @replay_path=sprintf(replay_path, { :home => ENV['HOME'], :tag => tag, :replay => replay })
+        FileUtils.rm_rf(@replay_path)
+        FileUtils.mkdir(@replay_path)
+
+        replay_log_file = File.open("#{@replay_path}/index.html", "w")
+        @replay_log = ::Logger.new replay_log_file
+
+        #@replay_log.formatter = proc do |severity, datetime, progname, msg|
+        #  # I, [2012-08-14T15:30:10.736784 #14647]  INFO -- : <p>Launching remote browser</p>
+        #  "<p>#{severity[0]}, [#{datetime} #{progname}]: #{severity} -- : #{msg}</p>\n"
+        #end
+
+        # Add in the tag and html-ify
+        @replay_log.formatter = proc { |severity, datetime, progname, msg|
+          # Can't flush after from here, so flush prior stuff
+          replay_log_file.flush
+          npn = "#{progname} #{tag} ".sub(/^\s*/,'').sub(/\s*$/,'')
+          stuff=original_formatter.call(severity, datetime, "#{progname} #{tag} ", msg)
+          #"<p>#{ERB::Util.html_escape(stuff.chomp)}</p>\n"
+          "<p>#{stuff.chomp}</p>\n"
+        }
+        @replay_log.level = ::Logger::WARN
+      else
+        @replay_log = nil
+      end
 
       @normal_log = ::Logger.new(STDOUT)
       # Add in the tag
@@ -77,7 +81,9 @@ module Gless
     # Passes on all the normal Logger methods.  By default, logs to
     # both the normal log and the replay log.
     def method_missing(m, *args, &block)
-      @replay_log.send(m, *args, &block)
+      if @replay_log
+        @replay_log.send(m, *args, &block)
+      end
       @normal_log.send(m, *args, &block)
     end
 
@@ -87,36 +93,38 @@ module Gless
     # @param [Watir::Browser] browser
     # @param [Gless::Session] session
     def add_to_replay_log( browser, session )
-      @ssnum = @ssnum + 1
+      if @replay_log
+        @ssnum = @ssnum + 1
 
-      if session.get_config :global, :screenshots
-        begin
-          browser.driver.save_screenshot "#{@replay_path}/screenshot_#{@ssnum}.png"
+        if session.get_config :global, :screenshots
+          begin
+            browser.driver.save_screenshot "#{@replay_path}/screenshot_#{@ssnum}.png"
 
-          if session.get_config :global, :thumbnails
-            require 'mini_magick'
+            if session.get_config :global, :thumbnails
+              require 'mini_magick'
 
-            image = MiniMagick::Image.open("#{@replay_path}/screenshot_#{@ssnum}.png")
-            image.resize "400"
-            image.write "#{@replay_path}/screenshot_#{@ssnum}_thumb.png"
-            FileUtils.chmod 0755, "#{@replay_path}/screenshot_#{@ssnum}_thumb.png"
+              image = MiniMagick::Image.open("#{@replay_path}/screenshot_#{@ssnum}.png")
+              image.resize "400"
+              image.write "#{@replay_path}/screenshot_#{@ssnum}_thumb.png"
+              FileUtils.chmod 0755, "#{@replay_path}/screenshot_#{@ssnum}_thumb.png"
 
-            @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'><img src='screenshot_#{@ssnum}_thumb.png' /></a>"
-          else
-            @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'>Screenshot</a>"
+              @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'><img src='screenshot_#{@ssnum}_thumb.png' /></a>"
+            else
+              @replay_log.debug "Screenshot: <a href='screenshot_#{@ssnum}.png'>Screenshot</a>"
+            end
+          rescue Exception => e
+            @normal_log.warn "Screenshot failed with exception #{e}"
           end
-        rescue Exception => e
-          @normal_log.warn "Screenshot failed with exception #{e}"
         end
+
+        html=browser.html
+        htmlFile = File.new("#{@replay_path}/html_capture_#{@ssnum}.txt", "w")
+        htmlFile.write(html)
+        htmlFile.close
+
+        @replay_log.debug "<a href='html_capture_#{@ssnum}.txt'>HTML Source</a>"
+        @replay_log.debug "Force flush"
       end
-
-      html=browser.html
-      htmlFile = File.new("#{@replay_path}/html_capture_#{@ssnum}.txt", "w")
-      htmlFile.write(html)
-      htmlFile.close
-
-      @replay_log.debug "<a href='html_capture_#{@ssnum}.txt'>HTML Source</a>"
-      @replay_log.debug "Force flush"
     end
   end
 end
