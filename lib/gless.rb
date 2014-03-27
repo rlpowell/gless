@@ -6,16 +6,12 @@
 # project.
 module Gless
   # The current version number.
-  VERSION = '1.6.1'
+  VERSION = '2.0.0'
 
   # Sets up the config, logger and browser instances, the ordering
   # of which is slightly tricky.  If a block is given, the config, after being
   # initialized from the config file, is passed to the block, which should
   # return the new, updated config.
-  #
-  # @param [String] tag A short name used in creating log lines and
-  # writing out the replay log and so on.  Only really relevant if
-  # multiple runs are happening at once.
   #
   # @param [Hash] hash Defaults to +nil+, which is ignored.  If
   # present, this hash is used intead of reading a config file; the
@@ -25,13 +21,13 @@ module Gless
   #   optional block should return an updated config if given.
   #
   # @return [Gless::Logger, Gless::EnvConfig, Gless::Browser] logger, config, browser (in that order)
-  def self.setup( tag, hash = nil )
+  def self.setup( hash = nil )
     # Create the config reading/storage object
     config = Gless::EnvConfig.new( hash )
     config = yield config if block_given?
 
     logger = Gless::Logger.new(
-      tag,
+      config.get_default( "notag", :global, :tag ),
       config.get_default( false, :global, :replay ),
       config.get_default( '%{home}/public_html/watir_replay/%{tag}', :global, :replay_path )
     )

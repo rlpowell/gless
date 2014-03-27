@@ -19,14 +19,17 @@ module Gless
     def initialize( config, logger )
       @config = config
       @logger = logger
+
+      @logger.debug "Requested browser config: #{@config.get :global, :browser }"
+
       type=@config.get :global, :browser, :type
       browser=@config.get :global, :browser, :browser
       port=@config.get :global, :browser, :port
       url=@config.get_default false, :global, :browser, :url
-      browser_version=@config.get_default '', :global, :browser, :version
-      platform=@config.get_default :any, :global, :browser, :platform
-      max_duration=@config.get_default 1800, :global, :browser, :max_duration
-      idle_timeout=@config.get_default 90, :global, :browser, :idle_timeout
+      extra_capabilities=@config.get_default false, :global, :browser, :extras
+      if ! extra_capabilities
+        extra_capabilities = Hash.new
+      end
 
       if browser =~ %r{^\s*ie\s*$} or browser =~ %r{^\s*internet\s*_?\s*explorer\s*$}
         browser = 'internet explorer'
@@ -41,11 +44,13 @@ module Gless
           :javascript_enabled=>true,
           :css_selectors_enabled=>true,
           :takes_screenshot=>true,
-          :'max-duration' => max_duration,
-          :'idle-timeout' => idle_timeout,
-          :version => browser_version,
-          :platform => platform
         )
+        # Load in any other stuff the user asked for
+        @logger.debug "Requested extra capabilities: #{extra_capabilities.inspect}"
+        extra_capabilities.each do |key, value|
+          @logger.debug "Adding capability #{key} with value #{value}"
+          capabilities[key] = value
+        end
 
         if url
           @logger.debug "Launching with custom url #{url}"

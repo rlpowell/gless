@@ -6,13 +6,20 @@
     :type: remote		# Local or remote
     :browser: chrome	# Which browser to use; "ie", "chrome", and "firefox" are definitely valid, there may be others
     :port: 4444		# If remote, port to connect to the selenium server, otherwise ignored
-    # These options would normally only be used with something like
-    # SauceLabs
+    # These options would normally only be used with something like SauceLabs
+    #
     # :url: "http://rlpowell:[snip]@ondemand.saucelabs.com:80/wd/hub" # The URL Sauce gives you
-    # :version: 27  # The browser version to use
-    # :platform: 'Windows 7' # The OS to use
-    # :idle_timeout: 600 # Sauce specific
-    # :max_duration: 5400 # Sauce specific
+    #
+    # "extras" is where special things are defined to add to the
+    # browser capabilities list; used for stuff like Sauce
+    # parameters.
+    #
+    # :extras:
+    #   :version: 27  # The browser version to use
+    #   :platform: 'Windows 7' # The OS to use
+    #   :"idle-timeout": 600 # Sauce specific
+    #   :"max-duration": 5400 # Sauce specific
+    #   :name: "default job name" # Sauce specific
   :verbose: false       # Whether to engage in more verbose/info level logging
   :debug: false	        # Whether to engage in debug logging
   :replay: false        # Whether to create a replay log, which shows html for each step of operations
@@ -21,3 +28,8 @@
   :screenshots: false   # Whether, if debugging is on, to create screenshots as part of the replay log
   :thumbnails: false	# Whether, if screenshots are on, to create small-ish "thumbnail" pictures on the replay page; requires the imagemagick system package and the mini_magick gem
   :cache: false  # Whether, by default, to cache elements, significantly improving performance.   For individual elements, caching can be disabled by adding ":cache => false" to the element specifier.
+
+  # A short name used in creating log lines and writing out the
+  # replay log and so on.  Only really relevant if multiple runs are
+  # happening at once.
+  :tag: "notag"

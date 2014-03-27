@@ -7,8 +7,7 @@ World(RSpec::Expectations)
 Before do
   require 'gless'
 
-  # FIXME: the tag entry here will have to change for parallel runs.
-  @logger, @config, @browser = Gless.setup( :test )
+  @logger, @config, @browser = Gless.setup()
 
   if @config.get :global, :debug
     require 'debugger'
