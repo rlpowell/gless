@@ -1,9 +1,27 @@
 - 1.1.0: 29 Jan 2013: By default, "element"s now ignore non-visible
-  elements on the page; use { :invisible => true } to get the old
-  behaviour.
+	 elements on the page; use { :invisible => true } to get the
+	 old behaviour.
 - 1.2.0: 10 Jun 2013: Changes by bairyn.  Added caching, finding
-based on parent element, and block validators.
+	 based on parent element, and block validators.
 - 1.3.0: 8 Aug 2013: Detect and work around errors caused by incorrect caching,
-and add support for element arguments, evaluating elements under new parents,
-finding based on children, and the :unique option to ensure only one element
-matches a specification.
+	 and add support for element arguments, evaluating elements
+	 under new parents, finding based on children, and the
+	 :unique option to ensure only one element matches a
+	 specification.
+- 1.3.1: 19 Aug 2013: Typo fix.
+- 1.4.0: 9 Sep 2013: Support for Sauce Labs related browser
+	 capabilities via options under the :browser option in the
+	 config file.
+- 1.4.1: 11 Sep 2013: More Sauce-specific options.
+- 1.4.2: 13 Sep 2013: Specified a license.
+- 1.5.0: 21 Sep 2013: Better error reporting, deep_merge, click_once
+	 with change_pages
+- 1.5.1: 25 Oct 2013: Support for no config file.
+- 1.5.2: 23 Feb 2014: Don't depend on Ruby's class creation order.
+- 1.6.0: 3 Mar 2014: Allow the replay log to be completely disabled.
+- 1.6.1: 3 Mar 2014: Let the logger decide want to log, instead of
+	 always checking the config state.
+- 2.0.0: 27 Mar 2014: Non-backwards-compatible changes to handling
+	 of both extra browser capabilities and tags.  The former is
+	 now under :browser => :extras in the config file, and the
+	 latter under :tag in the config file.
