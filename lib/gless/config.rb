@@ -103,6 +103,9 @@ module Gless
     private
 
     def set_root root, value, *indices
+      if root[indices[0]] == nil
+        root[indices[0]] = Hash.new
+      end
       if indices.length > 1
         set_root root[indices[0]], value, *indices[1..-1]
       else
