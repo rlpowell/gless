@@ -6,6 +6,7 @@
     :type: remote		# Local or remote
     :browser: chrome	# Which browser to use; "ie", "chrome", and "firefox" are definitely valid, there may be others
     :port: 4444		# If remote, port to connect to the selenium server, otherwise ignored
+    :timeout: 600       # Timeout on a per-operation basis
     # These options would normally only be used with something like SauceLabs
     #
     # :url: "http://rlpowell:[snip]@ondemand.saucelabs.com:80/wd/hub" # The URL Sauce gives you

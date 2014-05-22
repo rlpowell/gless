@@ -58,7 +58,10 @@ module Gless
           url = "http://127.0.0.1:#{port}/wd/hub"
         end
 
-        @browser = Watir::Browser.new(:remote, :url => url, :desired_capabilities => capabilities)
+        client = Selenium::WebDriver::Remote::Http::Default.new
+        client.timeout = config.get_default( 600, :global, :browser, :timeout )
+
+        @browser = Watir::Browser.new(:remote, :url => url, :desired_capabilities => capabilities, :http_client => client)
       else
         @logger.info "Launching local browser #{browser}"
         @browser = Watir::Browser.new browser
