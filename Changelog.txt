@@ -25,3 +25,7 @@
 	 of both extra browser capabilities and tags.  The former is
 	 now under :browser => :extras in the config file, and the
 	 latter under :tag in the config file.
+- 2.1.0: 22 May 2014: Added a "timeout" element to the config.
+- 2.1.1: 31 Jul 2014: Major changes to what happenes when we fail to
+	 arrive at a page; eventually the exception should trickle
+	 up to the user.

@@ -64,7 +64,7 @@ module Gless
       @browser = browser
       @application = application
       @pages = Hash.new
-      @timeout = 30
+      @timeout = config.get_default( 600, :global, :browser, :timeout )
       @acceptable_pages = nil
       @config = config
 
@@ -139,14 +139,6 @@ module Gless
         end
 
         good_page.should be_true, "Current URL is #{@browser.url}, which doesn't match any of the acceptable pages: #{@acceptable_pages}"
-
-        # While this is very thorough, it slows things down quite a
-        # bit, and should mostly be covered by
-        # Gless::WrapWatir#click ; leaving here in case we decide we
-        # need it later.
-        #
-        # log.debug "Session: checking for arrival at #{new_page.class.name}"
-        # new_page.arrived?.should be_true
 
         url=@browser.url
         log.debug "Session: refreshed browser URL: #{url}"
@@ -386,22 +378,25 @@ module Gless
       log.debug "Session: change_pages: checking to see if we have changed pages: #{@browser.title}, #{@current_page}, #{@acceptable_pages}"
 
       good_page = false
-      error_message = ''
+      error_message = nil
       new_page = nil
+      exceptions = {}
 
       # See if we're on one of the acceptable pages; wait until we
       # are for "timeout" seconds.
-      @timeout.times do
+      start_time = Time.now.to_i
+      while true
         self.log.debug "Session: change_pages: yielding to passed block."
         begin
           yield if block_given?
         rescue Watir::Exception::UnknownObjectException => e
-          error_message = "Caught UnknownObjectExepction; are the validators for #{@acceptable_pages} correct?  #{e.inspect}"
-          log.warn "Session#change_pages: #{error_message}"
+          error_message ||= "Caught UnknownObjectExepction in the block we were passed; are the validators for #{@acceptable_pages} correct?  Are you sure that's the right list of pages?  Here's the exception: #{e.inspect}"
         end
         self.log.debug "Session: change_pages: done yielding to passed block."
 
-        if @acceptable_pages.member?( @current_page )
+        # We're *definitely* staying on the same page; don't do any
+        # more work to check where we are
+        if @acceptable_pages.member?( @current_page ) and @acceptable_pages.length == 1
           good_page = true
           new_page = @current_page
           break
@@ -421,27 +416,20 @@ module Gless
 
           @acceptable_pages.each do |page|
             log.debug "Session: change_pages: Checking our current url, #{url}, for a match in #{page.name}: #{@pages[page].match_url(url)}"
-            if @pages[page].match_url(url) and @pages[page].arrived? == true
-              clear_cache
-              good_page    = true
-              @current_page = page
-              new_page = @pages[page]
-              log.debug "Session: change_pages: we seem to be on #{page.name} at #{url}"
-            end
-          end
+            begin
+              if @pages[page].match_url(url) and @pages[page].arrived? == true
+                clear_cache
+                good_page    = true
+                @current_page = page
+                new_page = @pages[page]
+                log.debug "Session: change_pages: we seem to be on #{page.name} at #{url}"
 
-          if new_page
-            if not new_page.match_url(url)
-              good_page = false
-              error_message = "Current URL is #{url}, which doesn't match that expected for any of the acceptable pages: #{@acceptable_pages}"
-              next
-            end
-
-            log.debug "Session: change_pages: checking for arrival at #{new_page.class.name}"
-            if not new_page.arrived?
-              good_page = false
-              error_message = "The current page, at #{url}, doesn't have all of the elements for any of the acceptable pages: #{@acceptable_pages}"
-              next
+                break
+              end
+            rescue StandardError => e
+              # Catching exceptions from "arrived?"; in this case we don't
+              # care until later
+              exceptions[page.name] = e.inspect
             end
           end
 
@@ -451,15 +439,19 @@ module Gless
             sleep 1
           end
         end
+
+        if (Time.now.to_i - start_time) > @timeout
+          break
+        end
       end
 
       if good_page
-        log.info "Session: change_pages: We have successfully moved to page #{new_page.class.name}"
+        log.info "Session: change_pages: We have successfully moved to page #{new_page.name}"
 
         @previous_url = url
       else
         # Timed out.
-        error_message = "Session: change_pages: attempt to change pages to #{click_destination} timed out after #{@timeout} tries.  If the clicked element exists, are the validators for #{@acceptable_pages} correct?"
+        error_message ||= "Session: change_pages: attempt to change pages to #{click_destination} timed out after #{@timeout} seconds, more or less.  If the clicked element exists, are the validators for #{@acceptable_pages} correct?  Here are the exceptions from each page we tried: #{YAML.dump(exceptions)}"
       end
 
       return good_page, error_message

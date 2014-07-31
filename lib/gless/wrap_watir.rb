@@ -415,7 +415,8 @@ module Gless
 
       if @click_destination && change_pages
         @session.log.debug "WrapWatir: #{@name}.click_once: changing pages"
-        @session.change_pages @click_destination, &block
+        change_pages_out, change_pages_message = @session.change_pages @click_destination, &block
+        change_pages_out.should be_true, change_pages_message
       end
     end
 

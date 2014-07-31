@@ -415,17 +415,17 @@ module Gless
               @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} found."
             else
               # Probably never reached
-              @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
+              @session.log.warn "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
             end
           rescue Watir::Wait::TimeoutError => e
-            @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
+            @session.log.warn "In GenericBasePage, for #{self.class.name}, arrived?: validator element #{x} NOT found."
             all_validate = false
           end
         end
 
         self.class.validator_blocks.each do |x|
           if ! x.call @browser, @session
-            @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: a validator block failed."
+            @session.log.warn "In GenericBasePage, for #{self.class.name}, arrived?: a validator block failed."
             all_validate = false
           end
         end
@@ -435,11 +435,15 @@ module Gless
             @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found."
             break
           else
-            @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found, but the current URL (#{@browser.url}) doesn't match the expected URL(s) (#{self.class.url_patterns})"
+            @session.log.warn "In GenericBasePage, for #{self.class.name}, arrived?: all validator elements found, but the current URL (#{@browser.url}) doesn't match the expected URL(s) (#{self.class.url_patterns}); trying again."
           end
         else
-          @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: not all validator elements found, trying again."
+          @session.log.warn "In GenericBasePage, for #{self.class.name}, arrived?: not all validator elements found, trying again."
         end
+      end
+
+      if ! all_validate
+          @session.log.warn "In GenericBasePage, for #{self.class.name}, arrived?: not all validator elements found, continuing, but this it's unlikely to go well."
       end
 
       begin
@@ -457,7 +461,7 @@ module Gless
 
         @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: completed successfully."
         return true
-      rescue Exception => e
+      rescue StandardError => e
         if @session.get_config :global, :debug
           @session.log.debug "GenericBasePage, for #{self.class.name}, arrived?: something doesn't match (url or title or expected elements), exception information follows, then giving you a debugger"
           @session.log.debug "Gless::BasePage: Had an exception in debug mode: #{e.inspect}"
@@ -465,7 +469,8 @@ module Gless
           @session.log.debug "Gless::BasePage: Had an exception in debug mode: #{e.backtrace.join("\n")}"
           debugger
         else
-          return false
+          @session.log.warn "In GenericBasePage, for #{self.class.name}, arrived?: failed to validate the page."
+          raise e
         end
       end
     end
