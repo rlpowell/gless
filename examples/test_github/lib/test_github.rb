@@ -20,12 +20,12 @@ module TestGithub
       @config = config
 
       @base_url = @config.get :global, :site, :url
-      @base_url.should be_true
+      @base_url.should be_truthy
 
       # Create the session
       @session = Gless::Session.new( @browser, @config, @logger, self )
 
-      @session.should be_true
+      @session.should be_truthy
 
       @logger.info "TestGithub Application: going to github"
       @session.enter TestGithub::LoginPage
@@ -39,7 +39,7 @@ module TestGithub
       @session.search_for name
 
       repodata = @session.find_repository repo_pattern
-      repodata.should be_true, "TestGithub Application: couldn't find repository #{name}"
+      repodata.should be_truthy, "TestGithub Application: couldn't find repository #{name}"
 
       @logger.info "TestGithub Application: found repository #{repodata[:name]}, which was at number #{repodata[:index] + 1} on the page, now opening it."
 

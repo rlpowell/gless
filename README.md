@@ -180,7 +180,7 @@ module TestGithub
 
       @session = Gless::Session.new( @browser, @config, @logger, self )
 
-      @session.should be_true
+      @session.should be_truthy
     end
 end
 ```

@@ -138,11 +138,11 @@ module Gless
           end
         end
 
-        good_page.should be_true, "Current URL is #{@browser.url}, which doesn't match any of the acceptable pages: #{@acceptable_pages}"
+        good_page.should be_truthy, "Current URL is #{@browser.url}, which doesn't match any of the acceptable pages: #{@acceptable_pages}"
 
         url=@browser.url
         log.debug "Session: refreshed browser URL: #{url}"
-        new_page.match_url(url).should be_true
+        new_page.match_url(url).should be_truthy
 
         log.info "Session: We are currently on page #{new_page.class.name}, as we should be"
 

@@ -416,7 +416,7 @@ module Gless
       if @click_destination && change_pages
         @session.log.debug "WrapWatir: #{@name}.click_once: changing pages"
         change_pages_out, change_pages_message = @session.change_pages @click_destination, &block
-        change_pages_out.should be_true, change_pages_message
+        change_pages_out.should be_truthy, change_pages_message
       end
     end
 
@@ -455,7 +455,7 @@ module Gless
         # If the return value isn't true, use it as the message to
         # print.
         @session.log.debug "WrapWatir: click: change pages results: #{change_pages_out}, #{change_pages_message}"
-        change_pages_out.should be_true, change_pages_message
+        change_pages_out.should be_truthy, change_pages_message
       else
         wrapper_logging('click', nil)
         @session.log.debug "WrapWatir: click: Calling click on a #{elem.class.name} element identified by: #{trimmed_selectors.inspect}"
@@ -527,7 +527,7 @@ module Gless
             wrap_watir_call :set
           end
         end
-        wrap_watir_call(:set?).should be_true
+        wrap_watir_call(:set?).should be_truthy
         @session.log.debug "WrapWatir: The radio set worked"
 
         return self

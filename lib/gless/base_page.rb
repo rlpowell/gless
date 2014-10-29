@@ -448,15 +448,15 @@ module Gless
 
       begin
         if respond_to? :has_expected_title?
-          has_expected_title?.should be_true
+          has_expected_title?.should be_truthy
         end
 
-        match_url( @browser.url ).should be_true
+        match_url( @browser.url ).should be_truthy
 
         # We don't use all_validate here because we want to alert on the
         # element with the problem
         self.class.validator_elements.each do |x|
-          self.send(x).wait_until_present(5).should be_true
+          self.send(x).wait_until_present(5).should be_truthy
         end
 
         @session.log.debug "In GenericBasePage, for #{self.class.name}, arrived?: completed successfully."

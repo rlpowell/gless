@@ -29,3 +29,4 @@
 - 2.1.1: 31 Jul 2014: Major changes to what happenes when we fail to
 	 arrive at a page; eventually the exception should trickle
 	 up to the user.
+- 3.0.0: 28 Oct 2014: Converted to RSpec 3

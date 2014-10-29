@@ -6,7 +6,7 @@
 # project.
 module Gless
   # The current version number.
-  VERSION = '2.1.1'
+  VERSION = '3.0.0'
 
   # Sets up the config, logger and browser instances, the ordering
   # of which is slightly tricky.  If a block is given, the config, after being
@@ -39,7 +39,7 @@ module Gless
       ::RSpec.configure do |config|
         # RSpec automatically cleans stuff out of backtraces;
         # sometimes this is annoying when trying to debug something e.g. a gem
-        config.backtrace_clean_patterns = []
+        config.backtrace_exclusion_patterns = []
       end
     end
 

@@ -1,7 +1,7 @@
 Given %r{^I start the application$} do
   klass = @config.get :global, :site, :class
   @application = Object.const_get(klass)::Application.new( @browser, @config, @logger )
-  @application.should be_true
+  @application.should be_truthy
 end
 
 When %r{^I fall through to the page object$} do
@@ -17,7 +17,7 @@ When 'I poke lots of buttons' do
 end
 
 Then 'I am on the Gless repo page' do
-  @application.session.arrived?.should be_true
+  @application.session.arrived?.should be_truthy
   @application.browser.url.should == 'https://github.com/rlpowell/gless'
 end
 
